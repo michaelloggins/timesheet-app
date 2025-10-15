@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 env:
-  AZURE_WEBAPP_NAME: api-miravista-timesheet
+  AZURE_WEBAPP_NAME: api-MVD-TimeSheet-timesheet
   NODE_VERSION: '20.x'
 
 jobs:

@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 env:
-  AZURE_FUNCTIONAPP_NAME: func-miravista-jobs
+  AZURE_FUNCTIONAPP_NAME: func-MVD-TimeSheet-jobs
   NODE_VERSION: '20.x'
 
 jobs:
