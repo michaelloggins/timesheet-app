@@ -1,6 +1,6 @@
-import { BearerStrategy, IBearerStrategyOption, ITokenPayload } from 'passport-azure-ad';
+import { BearerStrategy, BearerStrategyOptions } from 'passport-azure-ad';
 
-export const azureAdConfig: IBearerStrategyOption = {
+export const azureAdConfig: BearerStrategyOptions = {
   identityMetadata: `https://login.microsoftonline.com/${process.env.TENANT_ID}/v2.0/.well-known/openid-configuration`,
   clientID: process.env.CLIENT_ID || '',
   audience: process.env.CLIENT_ID || '',
@@ -13,7 +13,7 @@ export const azureAdConfig: IBearerStrategyOption = {
 
 export const bearerStrategy = new BearerStrategy(
   azureAdConfig,
-  (token: ITokenPayload, done: (err: Error | null, user?: any, info?: any) => void) => {
+  (token: any, done: (err: Error | null, user?: any, info?: any) => void) => {
     if (!token) {
       return done(new Error('No token provided'));
     }

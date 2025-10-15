@@ -1,6 +1,5 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response } from 'express';
 import { asyncHandler } from '../middleware/errorHandler';
-import * as authService from '../services/authService';
 
 export const login = asyncHandler(async (req: Request, res: Response) => {
   // TODO: Implement login logic

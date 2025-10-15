@@ -4,8 +4,6 @@
  */
 
 import * as timesheetRepo from '../repositories/timesheetRepository';
-import { notificationService } from './notificationService';
-import { orgChartService } from './orgChartService';
 import { Timesheet } from '../models/types';
 import { AppError } from '../middleware/errorHandler';
 

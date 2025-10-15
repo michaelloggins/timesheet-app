@@ -1,5 +1,5 @@
 import { getPool } from '../config/database';
-import { Timesheet, TimeEntry } from '../models/types';
+import { Timesheet } from '../models/types';
 
 export const findTimesheetsByUserId = async (userId: number): Promise<Timesheet[]> => {
   const pool = getPool();
@@ -46,7 +46,7 @@ export const createTimesheet = async (timesheet: Partial<Timesheet>): Promise<nu
 
 export const updateTimesheet = async (
   timesheetId: number,
-  updates: Partial<Timesheet>
+  _updates: Partial<Timesheet>
 ): Promise<void> => {
   // TODO: Implement dynamic update based on provided fields
   const pool = getPool();

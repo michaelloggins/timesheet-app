@@ -4,11 +4,11 @@
  */
 
 import { EmailClient, EmailMessage } from '@azure/communication-email';
-import { emailConfig, emailTemplates } from '../config/email';
+import { emailConfig } from '../config/email';
 import { logger } from '../utils/logger';
 
 class NotificationService {
-  private emailClient: EmailClient;
+  private emailClient: EmailClient | undefined;
 
   constructor() {
     if (emailConfig.connectionString) {

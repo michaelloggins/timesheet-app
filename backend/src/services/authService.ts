@@ -9,16 +9,14 @@ import { getUserByEntraId, updateLastLogin } from '../repositories/userRepositor
 import { AuthUser } from '../middleware/authMiddleware';
 
 export const generateToken = (user: AuthUser): string => {
-  return jwt.sign(
-    {
-      userId: user.userId,
-      entraId: user.entraId,
-      email: user.email,
-      role: user.role,
-    },
-    jwtConfig.secret,
-    { expiresIn: jwtConfig.expiresIn }
-  );
+  const payload = {
+    userId: user.userId,
+    entraId: user.entraId,
+    email: user.email,
+    role: user.role,
+  };
+
+  return jwt.sign(payload, jwtConfig.secret, { expiresIn: jwtConfig.expiresIn } as jwt.SignOptions);
 };
 
 export const verifyToken = (token: string): any => {

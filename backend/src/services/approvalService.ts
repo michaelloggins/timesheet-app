@@ -4,14 +4,12 @@
  */
 
 import * as timesheetRepo from '../repositories/timesheetRepository';
-import { orgChartService } from './orgChartService';
-import { notificationService } from './notificationService';
 import { AppError } from '../middleware/errorHandler';
 
 export const approveTimesheet = async (
   timesheetId: number,
   managerId: number,
-  managerEntraId: string
+  _managerEntraId: string
 ): Promise<void> => {
   // 1. Get timesheet
   const timesheet = await timesheetRepo.findTimesheetById(timesheetId);

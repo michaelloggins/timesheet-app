@@ -17,10 +17,10 @@ export interface AuthUser {
 }
 
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
-    interface Request {
-      user?: AuthUser;
-    }
+    // eslint-disable-next-line @typescript-eslint/no-empty-interface
+    interface User extends AuthUser {}
   }
 }
 
@@ -29,7 +29,7 @@ export const authenticate = asyncHandler(
     passport.authenticate(
       'oauth-bearer',
       { session: false },
-      async (err: Error, user: any, info: any) => {
+      async (err: Error, user: any, _info: any) => {
         if (err) {
           return next(new AppError(500, 'Authentication error'));
         }

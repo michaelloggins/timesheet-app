@@ -16,7 +16,7 @@ export const errorHandler = (
   err: Error | AppError,
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ) => {
   if (err instanceof AppError) {
     logger.error(`Operational Error: ${err.message}`, {
@@ -42,7 +42,13 @@ export const errorHandler = (
   });
 };
 
-export const asyncHandler = (fn: Function) => {
+type AsyncHandlerFunction = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => Promise<void> | void;
+
+export const asyncHandler = (fn: AsyncHandlerFunction) => {
   return (req: Request, res: Response, next: NextFunction) => {
     Promise.resolve(fn(req, res, next)).catch(next);
   };
