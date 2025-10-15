@@ -1,0 +1,23 @@
+{
+  "name": "miravista-timesheet-functions",
+  "version": "1.0.0",
+  "description": "Azure Functions for MiraVista Timesheet System",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "start": "func start",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@azure/communication-email": "^1.0.0",
+    "@azure/functions": "^4.0.0",
+    "axios": "^1.6.2",
+    "dotenv": "^16.3.1",
+    "mssql": "^10.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.5",
+    "typescript": "^5.3.3"
+  }
+}

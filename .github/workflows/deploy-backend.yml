@@ -1,0 +1,80 @@
+name: Deploy Backend API
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+      - '.github/workflows/deploy-backend.yml'
+  workflow_dispatch:
+
+env:
+  AZURE_WEBAPP_NAME: api-miravista-timesheet
+  NODE_VERSION: '20.x'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./backend
+        run: npm ci
+
+      - name: Run tests
+        working-directory: ./backend
+        run: npm test
+
+      - name: Run linter
+        working-directory: ./backend
+        run: npm run lint
+
+      - name: Build application
+        working-directory: ./backend
+        run: npm run build
+
+      - name: Create deployment package
+        working-directory: ./backend
+        run: |
+          mkdir deploy
+          cp -r dist deploy/
+          cp package.json deploy/
+          cp package-lock.json deploy/
+          cd deploy && npm ci --production
+          cd .. && zip -r deploy.zip deploy
+
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          package: ./backend/deploy.zip
+
+      - name: Verify deployment
+        run: |
+          sleep 30
+          curl -f https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net/health || exit 1
+
+      - name: Notify on success
+        if: success()
+        run: echo "✅ Backend deployed successfully to production"
+
+      - name: Notify on failure
+        if: failure()
+        run: echo "❌ Backend deployment failed"

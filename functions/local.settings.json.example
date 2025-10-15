@@ -1,0 +1,22 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "node",
+
+    "DB_SERVER": "your-server.database.windows.net",
+    "DB_NAME": "TimesheetDB",
+    "DB_USER": "sqladmin",
+    "DB_PASSWORD": "your-password",
+    "DB_ENCRYPT": "true",
+
+    "ACS_CONNECTION_STRING": "your-acs-connection-string",
+    "ACS_SENDER_ADDRESS": "noreply@miravistalabs.com",
+
+    "PAYCHEX_API_URL": "https://api.paychex.com",
+    "PAYCHEX_CLIENT_ID": "your-paychex-client-id",
+    "PAYCHEX_CLIENT_SECRET": "your-paychex-secret",
+
+    "APP_URL": "https://timesheet.miravistalabs.com"
+  }
+}
