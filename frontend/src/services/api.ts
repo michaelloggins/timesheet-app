@@ -4,7 +4,7 @@
  */
 
 import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
-import { msalInstance, tokenRequest } from '../config/authConfig';
+import { msalInstance } from '../config/authConfig';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
@@ -24,8 +24,10 @@ apiClient.interceptors.request.use(
       const accounts = msalInstance.getAllAccounts();
 
       if (accounts.length > 0) {
+        // Request token for our backend API (use CLIENT_ID as the scope)
+        const clientId = import.meta.env.VITE_CLIENT_ID;
         const response = await msalInstance.acquireTokenSilent({
-          ...tokenRequest,
+          scopes: [`api://${clientId}/access_as_user`],
           account: accounts[0],
         });
 
@@ -51,8 +53,9 @@ apiClient.interceptors.response.use(
       try {
         const accounts = msalInstance.getAllAccounts();
         if (accounts.length > 0) {
+          const clientId = import.meta.env.VITE_CLIENT_ID;
           await msalInstance.acquireTokenSilent({
-            ...tokenRequest,
+            scopes: [`api://${clientId}/access_as_user`],
             account: accounts[0],
           });
           // Retry the original request
