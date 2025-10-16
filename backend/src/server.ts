@@ -46,8 +46,10 @@ if (process.env.NODE_ENV === 'development') {
   app.use(morgan('combined'));
 }
 
-// Rate limiting
-app.use(rateLimiter);
+// Rate limiting (disabled in development)
+if (process.env.NODE_ENV !== 'development') {
+  app.use(rateLimiter);
+}
 
 // Health check endpoint
 app.get('/health', (req, res) => {

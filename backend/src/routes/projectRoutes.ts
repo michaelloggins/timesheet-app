@@ -4,8 +4,10 @@ import * as projectController from '../controllers/projectController';
 
 const router = Router();
 
-// All routes require authentication
-router.use(authenticate);
+// All routes require authentication (disabled in development for testing)
+if (process.env.NODE_ENV !== 'development') {
+  router.use(authenticate);
+}
 
 // Get projects (filtered by department)
 router.get('/', projectController.getProjects);

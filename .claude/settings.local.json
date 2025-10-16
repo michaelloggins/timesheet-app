@@ -20,7 +20,8 @@
       "Bash(taskkill:*)",
       "Bash(az webapp identity show:*)",
       "Bash(az webapp show:*)",
-      "Bash(az sql db query:*)"
+      "Bash(az sql db query:*)",
+      "Bash(az webapp config appsettings set:*)"
     ],
     "deny": [],
     "ask": []
