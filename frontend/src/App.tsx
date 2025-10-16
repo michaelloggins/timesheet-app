@@ -22,6 +22,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/timesheets" element={<TimesheetList />} />
+        <Route path="/timesheets/entry" element={<TimesheetEntry />} />
         <Route path="/timesheets/:id" element={<TimesheetEntry />} />
         <Route path="/approvals" element={<ApprovalsList />} />
         <Route path="/scoreboard" element={<Scoreboard />} />

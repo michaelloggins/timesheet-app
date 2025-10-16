@@ -49,7 +49,7 @@ apiClient.interceptors.response.use(
   (response: AxiosResponse) => response,
   async (error: AxiosError) => {
     if (error.response?.status === 401) {
-      // Token expired or invalid - trigger re-login
+      // Token expired or invalid - try to refresh
       try {
         const accounts = msalInstance.getAllAccounts();
         if (accounts.length > 0) {
@@ -62,8 +62,10 @@ apiClient.interceptors.response.use(
           return apiClient.request(error.config!);
         }
       } catch (refreshError) {
-        // Force logout
-        msalInstance.logout();
+        // Don't automatically logout - let the user stay signed in
+        // They can manually sign out if needed
+        console.error('Token refresh failed:', refreshError);
+        // Just return the error without logging out
       }
     }
 
