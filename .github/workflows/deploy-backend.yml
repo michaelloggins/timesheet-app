@@ -70,7 +70,7 @@ jobs:
 
       - name: Verify deployment
         run: |
-          sleep 30
+          sleep 60
           curl -f https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net/health || exit 1
 
       - name: Notify on success
