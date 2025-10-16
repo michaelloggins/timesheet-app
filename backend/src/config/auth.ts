@@ -7,12 +7,12 @@ dotenv.config();
 export const azureAdConfig: BearerStrategyOptions = {
   identityMetadata: `https://login.microsoftonline.com/${process.env.TENANT_ID}/v2.0/.well-known/openid-configuration`,
   clientID: process.env.CLIENT_ID || '',
-  audience: process.env.CLIENT_ID || '',
+  audience: `api://${process.env.CLIENT_ID}` || '',
   validateIssuer: true,
   issuer: `https://login.microsoftonline.com/${process.env.TENANT_ID}/v2.0`,
   passReqToCallback: false,
   loggingLevel: process.env.NODE_ENV === 'development' ? 'info' : 'error',
-  scope: ['User.Read'],
+  scope: ['access_as_user'],
 };
 
 export const bearerStrategy = new BearerStrategy(
