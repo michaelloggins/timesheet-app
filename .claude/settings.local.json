@@ -1,15 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Read(//c/Users/mloggins/Downloads/**)",
-      "Bash(git init:*)",
-      "Bash(git add:*)",
-      "Bash(git commit:*)",
-      "Bash(gh:*)",
-      "Bash(git reset:*)",
-      "Bash(git remote:*)",
-      "Bash(git rm:*)",
-      "Bash(git push:*)"
+      "Bash(az functionapp deployment list-publishing-profiles:*)",
+      "Bash(az webapp deployment:*)",
+      "Bash(az webapp restart:*)",
+      "Bash(curl:*)",
+      "Bash(az webapp log tail:*)",
+      "Bash(az webapp config appsettings list:*)"
     ],
     "deny": [],
     "ask": []
