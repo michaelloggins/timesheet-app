@@ -6,7 +6,21 @@
       "Bash(az webapp restart:*)",
       "Bash(curl:*)",
       "Bash(az webapp log tail:*)",
-      "Bash(az webapp config appsettings list:*)"
+      "Bash(az webapp config appsettings list:*)",
+      "Bash(az ad app:*)",
+      "Bash(npm run dev:*)",
+      "Bash(az sql server firewall-rule list:*)",
+      "Bash(az sql db show:*)",
+      "Bash(az sql server ad-admin list:*)",
+      "Bash(az ad user:*)",
+      "Bash(az sql server ad-admin create:*)",
+      "Bash(npm install:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill:*)",
+      "Bash(az webapp identity show:*)",
+      "Bash(az webapp show:*)",
+      "Bash(az sql db query:*)"
     ],
     "deny": [],
     "ask": []

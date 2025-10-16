@@ -1,4 +1,8 @@
+import dotenv from 'dotenv';
 import { BearerStrategy, BearerStrategyOptions } from 'passport-azure-ad';
+
+// Load environment variables before configuring auth strategy
+dotenv.config();
 
 export const azureAdConfig: BearerStrategyOptions = {
   identityMetadata: `https://login.microsoftonline.com/${process.env.TENANT_ID}/v2.0/.well-known/openid-configuration`,

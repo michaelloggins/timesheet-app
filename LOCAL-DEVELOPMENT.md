@@ -70,6 +70,9 @@ API_BASE_URL=http://localhost:3001
 # Azure SQL Database
 DB_SERVER=sql-miravista-prod.database.windows.net
 DB_NAME=TimesheetDB
+# Use Azure AD authentication for local development (recommended)
+DB_USE_AZURE_AD=true
+# SQL authentication credentials (used in production/Azure - optional for local)
 DB_USER=sqladmin
 DB_PASSWORD=<your-password>
 DB_ENCRYPT=true
@@ -243,10 +246,17 @@ VITE_API_BASE_URL=http://localhost:3001/api
 
 If you have access to the Azure SQL database:
 
-1. **Add your IP to firewall:**
+1. **Login to Azure CLI:**
 ```bash
 az login
+```
 
+2. **Add your IP to firewall:**
+```bash
+# Get your current IP
+curl ifconfig.me
+
+# Add firewall rule
 az sql server firewall-rule create \
   --resource-group rg-miravista-timesheet-prod \
   --server sql-miravista-prod \
@@ -255,16 +265,33 @@ az sql server firewall-rule create \
   --end-ip-address YOUR_IP
 ```
 
-2. **Test connection:**
-```bash
-# Using Azure CLI
-az sql db show-connection-string \
-  --client ado.net \
-  --name TimesheetDB \
-  --server sql-miravista-prod
-```
+3. **Configure Azure AD Authentication (Recommended):**
 
-3. **Update backend/.env with database credentials**
+Set `DB_USE_AZURE_AD=true` in your `backend/.env` file. The application will automatically use your Azure CLI credentials to authenticate to the database.
+
+**Advantages:**
+- No need to manage database passwords
+- Uses your existing Azure identity
+- More secure than SQL authentication
+- Automatic credential refresh
+
+**How it works:**
+- The application uses `DefaultAzureCredential` from `@azure/identity`
+- It automatically picks up your Azure CLI login
+- You must be set as an Azure AD admin on the SQL server (already configured)
+
+4. **Alternative: SQL Authentication**
+
+If you prefer SQL authentication, set `DB_USE_AZURE_AD=false` and provide `DB_USER` and `DB_PASSWORD` in your `backend/.env` file.
+
+5. **Test connection:**
+```bash
+# Start the backend
+npm run dev:backend
+
+# Check logs for successful connection
+# You should see: "Database connection successful"
+```
 
 ### Option 2: Use Local SQL Server (Optional)
 

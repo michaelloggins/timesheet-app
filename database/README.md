@@ -9,6 +9,7 @@ This folder contains SQL scripts for setting up the MiraVista Timesheet database
 - **schema.sql** - Core database schema (tables, indexes, triggers)
 - **views.sql** - Semantic views for reporting and Power BI integration
 - **seed-data.sql** - Initial sample data for development
+- **setup-managed-identity.sql** - Configure Azure Web App managed identity for database access
 
 ## Prerequisites
 
@@ -102,6 +103,31 @@ az sql server firewall-rule create \
 - Store connection strings in Azure Key Vault
 - Use least privilege database permissions
 - Enable Azure AD authentication
+
+### Azure AD Authentication
+
+The application supports both SQL authentication and Azure AD authentication:
+
+**Local Development (Recommended):**
+```env
+# In backend/.env
+DB_USE_AZURE_AD=true
+```
+
+This uses your Azure CLI credentials (`az login`) to connect to the database. You must be configured as an Azure AD admin on the SQL server.
+
+**Production with Managed Identity:**
+
+1. Run `setup-managed-identity.sql` in Azure Portal Query Editor to grant database access to the Web App
+2. Configure Web App settings:
+```bash
+az webapp config appsettings set \
+  --name api-miravista-timesheet \
+  --resource-group rg-miravista-timesheet-prod \
+  --settings DB_USE_AZURE_AD=true
+```
+
+See [PRODUCTION-DEPLOYMENT.md](../PRODUCTION-DEPLOYMENT.md) for detailed instructions.
 
 ## Maintenance
 

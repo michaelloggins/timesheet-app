@@ -77,9 +77,14 @@ app.use(errorHandler);
 // Start server
 const startServer = async () => {
   try {
-    // Connect to database
-    await connectDatabase();
-    logger.info('Database connection established');
+    // Try to connect to database
+    try {
+      await connectDatabase();
+      logger.info('Database connection established');
+    } catch (dbError) {
+      logger.warn('Database connection failed - server will start without database:', dbError);
+      logger.warn('Some features may not work until database is available');
+    }
 
     app.listen(PORT, () => {
       logger.info(`Server running on port ${PORT}`);
