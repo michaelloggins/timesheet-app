@@ -1,0 +1,14 @@
+{
+  "oauth2PermissionScopes": [
+    {
+      "adminConsentDescription": "Allows the app to access timesheet data on behalf of the signed-in user",
+      "adminConsentDisplayName": "Access timesheet app",
+      "id": "41be2db6-3a0d-4a15-8d5e-7e5e5f5f5f5f",
+      "isEnabled": true,
+      "type": "User",
+      "userConsentDescription": "Allows the app to access your timesheet data",
+      "userConsentDisplayName": "Access your timesheet data",
+      "value": "access_as_user"
+    }
+  ]
+}
