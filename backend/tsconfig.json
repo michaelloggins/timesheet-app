@@ -23,8 +23,7 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "typeRoots": ["./node_modules/@types", "./src/types"],
-    "types": ["node", "jest"]
+    "typeRoots": ["./node_modules/@types", "./src/types"]
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "tests"]
