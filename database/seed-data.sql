@@ -140,12 +140,15 @@ VALUES
     (@TimesheetID, @UserID, @ProjectID, DATEADD(DAY, 4, @WeekStart), 8.0, 'Office');
 
 PRINT 'Sample timesheet created';
+GO
 
 -- =============================================
 -- Summary
 -- =============================================
 SELECT 'Seed Data Summary' AS Info;
-SELECT 'Departments' AS TableName, COUNT(*) AS RowCount FROM Departments
+GO
+
+SELECT 'Departments' AS TableName, COUNT(*) AS [RowCount] FROM Departments
 UNION ALL
 SELECT 'Users', COUNT(*) FROM Users
 UNION ALL
