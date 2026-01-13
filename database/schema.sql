@@ -101,7 +101,7 @@ CREATE TABLE TimeEntries (
     CONSTRAINT FK_TimeEntries_Project FOREIGN KEY (ProjectID)
         REFERENCES Projects(ProjectID),
     CONSTRAINT CHK_TimeEntries_Hours CHECK (HoursWorked >= 0 AND HoursWorked <= 24),
-    CONSTRAINT CHK_TimeEntries_Location CHECK (WorkLocation IN ('Office', 'WFH')),
+    CONSTRAINT CHK_TimeEntries_Location CHECK (WorkLocation IN ('Office', 'WFH', 'Other')),
     CONSTRAINT UQ_TimeEntries_UserDateProject UNIQUE (UserID, WorkDate, ProjectID)
 );
 

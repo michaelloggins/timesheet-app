@@ -381,7 +381,7 @@ interface DayEntry {
   projectId: number;
   projectName: string;
   hours: number;
-  location: 'Office' | 'WFH';
+  location: 'Office' | 'WFH' | 'Other';
   notes?: string;
   entryId?: number;
 }
@@ -490,7 +490,7 @@ export const MobileTimesheetEntry: React.FC<MobileTimesheetEntryProps> = ({
     }
   };
 
-  const handleLocationChange = (projectId: number, location: 'Office' | 'WFH') => {
+  const handleLocationChange = (projectId: number, location: 'Office' | 'WFH' | 'Other') => {
     if (disabled) return;
 
     const existing = entries.find(

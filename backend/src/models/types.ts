@@ -59,7 +59,7 @@ export interface TimeEntry {
   ProjectID: number;
   WorkDate: Date;
   HoursWorked: number;
-  WorkLocation: 'Office' | 'WFH';
+  WorkLocation: 'Office' | 'WFH' | 'Other';
   Notes?: string;
   CreatedDate: Date;
   ModifiedDate: Date;

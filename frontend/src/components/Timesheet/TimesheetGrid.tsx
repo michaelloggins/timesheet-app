@@ -12,7 +12,6 @@ import {
   Input,
   Dropdown,
   Option,
-  Switch,
   Textarea,
   Card,
   Text,
@@ -20,6 +19,7 @@ import {
   Body1Strong,
   shorthands,
   mergeClasses,
+  ToggleButton,
 } from '@fluentui/react-components';
 import {
   Add24Regular,
@@ -177,10 +177,17 @@ const useStyles = makeStyles({
       minHeight: '44px', // Touch-friendly
     },
   },
-  mobileLocationSwitch: {
+  mobileLocationPills: {
     display: 'flex',
     alignItems: 'center',
-    ...shorthands.gap(tokens.spacingHorizontalS),
+    ...shorthands.gap(tokens.spacingHorizontalXS),
+    flexWrap: 'wrap',
+  },
+  mobileLocationPill: {
+    minWidth: 'auto',
+    ...shorthands.padding(tokens.spacingVerticalXS, tokens.spacingHorizontalM),
+    fontSize: tokens.fontSizeBase200,
+    height: '36px',
   },
   mobileNotesInput: {
     width: '100%',
@@ -207,11 +214,17 @@ const useStyles = makeStyles({
     flexDirection: 'column',
     ...shorthands.gap(tokens.spacingVerticalXXS),
   },
-  locationSwitch: {
+  locationPills: {
     display: 'flex',
     alignItems: 'center',
     ...shorthands.gap(tokens.spacingHorizontalXXS),
+    marginTop: tokens.spacingVerticalXXS,
+  },
+  locationPill: {
+    minWidth: 'auto',
+    ...shorthands.padding(tokens.spacingVerticalXXS, tokens.spacingHorizontalS),
     fontSize: tokens.fontSizeBase100,
+    height: '24px',
   },
   notesInput: {
     minHeight: '40px',
@@ -321,7 +334,7 @@ interface GridEntry {
   projectName: string;
   dailyEntries: Record<string, {
     hours: number;
-    location: 'Office' | 'WFH';
+    location: 'Office' | 'WFH' | 'Other';
     notes?: string;
     entryId?: number;
   }>;
@@ -513,7 +526,7 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
       projectId,
       workDate: date,
       ...(field === 'hours' && { hoursWorked: value as number }),
-      ...(field === 'location' && { workLocation: value as 'Office' | 'WFH' }),
+      ...(field === 'location' && { workLocation: value as 'Office' | 'WFH' | 'Other' }),
       ...(field === 'notes' && { notes: value as string }),
     };
 
@@ -721,24 +734,38 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
                       className={styles.hoursInput}
                     />
                     {/* Hide location toggle for PTO/Holiday projects */}
-                    {!isPtoOrHoliday && (
-                      <div className={styles.locationSwitch}>
-                        <Caption1>
-                          {dayEntry.location === 'Office' ? 'Office' : 'WFH'}
-                        </Caption1>
-                        <Switch
+                    {!isPtoOrHoliday && dayEntry.hours > 0 && (
+                      <div className={styles.locationPills}>
+                        <ToggleButton
+                          size="small"
+                          appearance={dayEntry.location === 'Office' ? 'primary' : 'outline'}
+                          checked={dayEntry.location === 'Office'}
+                          disabled={disabled}
+                          className={styles.locationPill}
+                          onClick={() => handleUpdateEntry(gridEntry.projectId, dateStr, 'location', 'Office')}
+                        >
+                          Office
+                        </ToggleButton>
+                        <ToggleButton
+                          size="small"
+                          appearance={dayEntry.location === 'WFH' ? 'primary' : 'outline'}
                           checked={dayEntry.location === 'WFH'}
-                          disabled={disabled || dayEntry.hours === 0}
-                          tabIndex={-1}
-                          onChange={(_, data) => {
-                            handleUpdateEntry(
-                              gridEntry.projectId,
-                              dateStr,
-                              'location',
-                              data.checked ? 'WFH' : 'Office'
-                            );
-                          }}
-                        />
+                          disabled={disabled}
+                          className={styles.locationPill}
+                          onClick={() => handleUpdateEntry(gridEntry.projectId, dateStr, 'location', 'WFH')}
+                        >
+                          WFH
+                        </ToggleButton>
+                        <ToggleButton
+                          size="small"
+                          appearance={dayEntry.location === 'Other' ? 'primary' : 'outline'}
+                          checked={dayEntry.location === 'Other'}
+                          disabled={disabled}
+                          className={styles.locationPill}
+                          onClick={() => handleUpdateEntry(gridEntry.projectId, dateStr, 'location', 'Other')}
+                        >
+                          Other
+                        </ToggleButton>
                       </div>
                     )}
                     {dayEntry.hours > 0 && (
@@ -846,22 +873,39 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
                               className={styles.mobileHoursInput}
                               contentBefore={<Text size={200}>Hours:</Text>}
                             />
-                            {/* Location Toggle - hide for PTO/Holiday */}
-                            {!isPtoOrHoliday && (
-                              <div className={styles.mobileLocationSwitch}>
-                                <Caption1>{dayEntry.location}</Caption1>
-                                <Switch
+                            {/* Location Pills - hide for PTO/Holiday */}
+                            {!isPtoOrHoliday && dayEntry.hours > 0 && (
+                              <div className={styles.mobileLocationPills}>
+                                <ToggleButton
+                                  size="small"
+                                  appearance={dayEntry.location === 'Office' ? 'primary' : 'outline'}
+                                  checked={dayEntry.location === 'Office'}
+                                  disabled={disabled}
+                                  className={styles.mobileLocationPill}
+                                  onClick={() => handleUpdateEntry(gridEntry.projectId, selectedDateStr, 'location', 'Office')}
+                                >
+                                  Office
+                                </ToggleButton>
+                                <ToggleButton
+                                  size="small"
+                                  appearance={dayEntry.location === 'WFH' ? 'primary' : 'outline'}
                                   checked={dayEntry.location === 'WFH'}
-                                  disabled={disabled || dayEntry.hours === 0}
-                                  onChange={(_, data) => {
-                                    handleUpdateEntry(
-                                      gridEntry.projectId,
-                                      selectedDateStr,
-                                      'location',
-                                      data.checked ? 'WFH' : 'Office'
-                                    );
-                                  }}
-                                />
+                                  disabled={disabled}
+                                  className={styles.mobileLocationPill}
+                                  onClick={() => handleUpdateEntry(gridEntry.projectId, selectedDateStr, 'location', 'WFH')}
+                                >
+                                  WFH
+                                </ToggleButton>
+                                <ToggleButton
+                                  size="small"
+                                  appearance={dayEntry.location === 'Other' ? 'primary' : 'outline'}
+                                  checked={dayEntry.location === 'Other'}
+                                  disabled={disabled}
+                                  className={styles.mobileLocationPill}
+                                  onClick={() => handleUpdateEntry(gridEntry.projectId, selectedDateStr, 'location', 'Other')}
+                                >
+                                  Other
+                                </ToggleButton>
                               </div>
                             )}
                           </div>

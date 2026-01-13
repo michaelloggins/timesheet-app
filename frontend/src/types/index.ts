@@ -54,7 +54,7 @@ export interface TimeEntry {
   projectId: number;
   workDate: string;
   hoursWorked: number;
-  workLocation: 'Office' | 'WFH';
+  workLocation: 'Office' | 'WFH' | 'Other';
   notes?: string;
 }
 
@@ -107,7 +107,7 @@ export interface TimeEntryFormData {
   projectId: number;
   workDate: string;
   hoursWorked: number;
-  workLocation: 'Office' | 'WFH';
+  workLocation: 'Office' | 'WFH' | 'Other';
   notes?: string;
 }
 
