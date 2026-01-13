@@ -180,14 +180,36 @@ const useStyles = makeStyles({
   mobileLocationPills: {
     display: 'flex',
     alignItems: 'center',
-    ...shorthands.gap(tokens.spacingHorizontalXS),
-    flexWrap: 'wrap',
+    justifyContent: 'center',
+    marginTop: tokens.spacingVerticalS,
+    width: '100%',
   },
-  mobileLocationPill: {
+  mobileLocationPillLeft: {
     minWidth: 'auto',
     ...shorthands.padding(tokens.spacingVerticalXS, tokens.spacingHorizontalM),
     fontSize: tokens.fontSizeBase200,
     height: '36px',
+    borderTopRightRadius: '0',
+    borderBottomRightRadius: '0',
+    borderRight: 'none',
+  },
+  mobileLocationPillCenter: {
+    minWidth: 'auto',
+    ...shorthands.padding(tokens.spacingVerticalXS, tokens.spacingHorizontalM),
+    fontSize: tokens.fontSizeBase200,
+    height: '36px',
+    ...shorthands.borderRadius('0'),
+    borderLeft: 'none',
+    borderRight: 'none',
+  },
+  mobileLocationPillRight: {
+    minWidth: 'auto',
+    ...shorthands.padding(tokens.spacingVerticalXS, tokens.spacingHorizontalM),
+    fontSize: tokens.fontSizeBase200,
+    height: '36px',
+    borderTopLeftRadius: '0',
+    borderBottomLeftRadius: '0',
+    borderLeft: 'none',
   },
   mobileNotesInput: {
     width: '100%',
@@ -217,14 +239,35 @@ const useStyles = makeStyles({
   locationPills: {
     display: 'flex',
     alignItems: 'center',
-    ...shorthands.gap(tokens.spacingHorizontalXXS),
+    justifyContent: 'center',
     marginTop: tokens.spacingVerticalXXS,
   },
-  locationPill: {
+  locationPillLeft: {
     minWidth: 'auto',
     ...shorthands.padding(tokens.spacingVerticalXXS, tokens.spacingHorizontalS),
     fontSize: tokens.fontSizeBase100,
     height: '24px',
+    borderTopRightRadius: '0',
+    borderBottomRightRadius: '0',
+    borderRight: 'none',
+  },
+  locationPillCenter: {
+    minWidth: 'auto',
+    ...shorthands.padding(tokens.spacingVerticalXXS, tokens.spacingHorizontalS),
+    fontSize: tokens.fontSizeBase100,
+    height: '24px',
+    ...shorthands.borderRadius('0'),
+    borderLeft: 'none',
+    borderRight: 'none',
+  },
+  locationPillRight: {
+    minWidth: 'auto',
+    ...shorthands.padding(tokens.spacingVerticalXXS, tokens.spacingHorizontalS),
+    fontSize: tokens.fontSizeBase100,
+    height: '24px',
+    borderTopLeftRadius: '0',
+    borderBottomLeftRadius: '0',
+    borderLeft: 'none',
   },
   notesInput: {
     minHeight: '40px',
@@ -741,7 +784,7 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
                           appearance={dayEntry.location === 'Office' ? 'primary' : 'outline'}
                           checked={dayEntry.location === 'Office'}
                           disabled={disabled}
-                          className={styles.locationPill}
+                          className={styles.locationPillLeft}
                           onClick={() => handleUpdateEntry(gridEntry.projectId, dateStr, 'location', 'Office')}
                         >
                           Office
@@ -751,7 +794,7 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
                           appearance={dayEntry.location === 'WFH' ? 'primary' : 'outline'}
                           checked={dayEntry.location === 'WFH'}
                           disabled={disabled}
-                          className={styles.locationPill}
+                          className={styles.locationPillCenter}
                           onClick={() => handleUpdateEntry(gridEntry.projectId, dateStr, 'location', 'WFH')}
                         >
                           WFH
@@ -761,7 +804,7 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
                           appearance={dayEntry.location === 'Other' ? 'primary' : 'outline'}
                           checked={dayEntry.location === 'Other'}
                           disabled={disabled}
-                          className={styles.locationPill}
+                          className={styles.locationPillRight}
                           onClick={() => handleUpdateEntry(gridEntry.projectId, dateStr, 'location', 'Other')}
                         >
                           Other
@@ -873,42 +916,42 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
                               className={styles.mobileHoursInput}
                               contentBefore={<Text size={200}>Hours:</Text>}
                             />
-                            {/* Location Pills - hide for PTO/Holiday */}
-                            {!isPtoOrHoliday && dayEntry.hours > 0 && (
-                              <div className={styles.mobileLocationPills}>
-                                <ToggleButton
-                                  size="small"
-                                  appearance={dayEntry.location === 'Office' ? 'primary' : 'outline'}
-                                  checked={dayEntry.location === 'Office'}
-                                  disabled={disabled}
-                                  className={styles.mobileLocationPill}
-                                  onClick={() => handleUpdateEntry(gridEntry.projectId, selectedDateStr, 'location', 'Office')}
-                                >
-                                  Office
-                                </ToggleButton>
-                                <ToggleButton
-                                  size="small"
-                                  appearance={dayEntry.location === 'WFH' ? 'primary' : 'outline'}
-                                  checked={dayEntry.location === 'WFH'}
-                                  disabled={disabled}
-                                  className={styles.mobileLocationPill}
-                                  onClick={() => handleUpdateEntry(gridEntry.projectId, selectedDateStr, 'location', 'WFH')}
-                                >
-                                  WFH
-                                </ToggleButton>
-                                <ToggleButton
-                                  size="small"
-                                  appearance={dayEntry.location === 'Other' ? 'primary' : 'outline'}
-                                  checked={dayEntry.location === 'Other'}
-                                  disabled={disabled}
-                                  className={styles.mobileLocationPill}
-                                  onClick={() => handleUpdateEntry(gridEntry.projectId, selectedDateStr, 'location', 'Other')}
-                                >
-                                  Other
-                                </ToggleButton>
-                              </div>
-                            )}
                           </div>
+                          {/* Location Pills - hide for PTO/Holiday, centered below hours */}
+                          {!isPtoOrHoliday && dayEntry.hours > 0 && (
+                            <div className={styles.mobileLocationPills}>
+                              <ToggleButton
+                                size="small"
+                                appearance={dayEntry.location === 'Office' ? 'primary' : 'outline'}
+                                checked={dayEntry.location === 'Office'}
+                                disabled={disabled}
+                                className={styles.mobileLocationPillLeft}
+                                onClick={() => handleUpdateEntry(gridEntry.projectId, selectedDateStr, 'location', 'Office')}
+                              >
+                                Office
+                              </ToggleButton>
+                              <ToggleButton
+                                size="small"
+                                appearance={dayEntry.location === 'WFH' ? 'primary' : 'outline'}
+                                checked={dayEntry.location === 'WFH'}
+                                disabled={disabled}
+                                className={styles.mobileLocationPillCenter}
+                                onClick={() => handleUpdateEntry(gridEntry.projectId, selectedDateStr, 'location', 'WFH')}
+                              >
+                                WFH
+                              </ToggleButton>
+                              <ToggleButton
+                                size="small"
+                                appearance={dayEntry.location === 'Other' ? 'primary' : 'outline'}
+                                checked={dayEntry.location === 'Other'}
+                                disabled={disabled}
+                                className={styles.mobileLocationPillRight}
+                                onClick={() => handleUpdateEntry(gridEntry.projectId, selectedDateStr, 'location', 'Other')}
+                              >
+                                Other
+                              </ToggleButton>
+                            </div>
+                          )}
                           {/* Notes */}
                           {dayEntry.hours > 0 && (
                             <Textarea
