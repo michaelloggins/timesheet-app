@@ -31,6 +31,10 @@ import {
   Dropdown,
   Option,
   Field,
+  Popover,
+  PopoverTrigger,
+  PopoverSurface,
+  Link,
 } from '@fluentui/react-components';
 import {
   AddRegular,
@@ -101,15 +105,6 @@ const useStyles = makeStyles({
   },
   filterField: {
     minWidth: '150px',
-  },
-  auditMeta: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '2px',
-  },
-  auditMetaSecondary: {
-    fontSize: tokens.fontSizeBase200,
-    color: tokens.colorNeutralForeground3,
   },
 });
 
@@ -788,12 +783,8 @@ export const AdminPanel = () => {
                         return (
                           <TableRow key={log.historyId}>
                             <TableCell>
-                              <div className={styles.auditMeta}>
-                                <span>{new Date(log.actionDate).toLocaleDateString()}</span>
-                                <span className={styles.auditMetaSecondary}>
-                                  {new Date(log.actionDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </span>
-                              </div>
+                              {new Date(log.actionDate).toLocaleDateString()}{' '}
+                              {new Date(log.actionDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </TableCell>
                             <TableCell>
                               <Badge
@@ -805,10 +796,7 @@ export const AdminPanel = () => {
                               </Badge>
                             </TableCell>
                             <TableCell>
-                              <div className={styles.auditMeta}>
-                                <span>{log.actionBy.name}</span>
-                                <span className={styles.auditMetaSecondary}>{log.actionBy.email}</span>
-                              </div>
+                              {log.actionBy.name}
                             </TableCell>
                             <TableCell>
                               {log.timesheetOwner?.name || '-'}
@@ -823,7 +811,16 @@ export const AdminPanel = () => {
                               ) : '-'}
                             </TableCell>
                             <TableCell>
-                              {log.notes || '-'}
+                              {log.notes ? (
+                                <Popover>
+                                  <PopoverTrigger disableButtonEnhancement>
+                                    <Link>See Notes</Link>
+                                  </PopoverTrigger>
+                                  <PopoverSurface style={{ maxWidth: '300px' }}>
+                                    {log.notes}
+                                  </PopoverSurface>
+                                </Popover>
+                              ) : '-'}
                             </TableCell>
                           </TableRow>
                         );
