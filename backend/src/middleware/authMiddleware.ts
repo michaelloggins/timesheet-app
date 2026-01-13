@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import passport from 'passport';
 import { bearerStrategy } from '../config/auth';
 import { AppError, asyncHandler } from './errorHandler';
-import { getUserByEntraId } from '../repositories/userRepository';
+import { getUserByEntraId, updateLastLogin } from '../repositories/userRepository';
 
 // Initialize passport
 passport.use(bearerStrategy);
@@ -45,6 +45,11 @@ export const authenticate = asyncHandler(
           if (!dbUser) {
             return next(new AppError(401, 'User not found in system'));
           }
+
+          // Update last login timestamp (fire and forget - don't block auth)
+          updateLastLogin(dbUser.UserID).catch(() => {
+            // Silently ignore errors - login tracking is not critical
+          });
 
           // Attach user to request
           req.user = {
