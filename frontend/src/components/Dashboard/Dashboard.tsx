@@ -521,9 +521,9 @@ export const Dashboard = () => {
     submit();
   };
 
-  // Navigate to timesheet list with filter
-  const handleKPIClick = (filter: 'approved' | 'pending' | 'all') => {
-    navigate('/timesheets', { state: { filter } });
+  // Navigate to Reports page filtered by current user
+  const handleKPIClick = () => {
+    navigate('/reports', { state: { userId: user?.userId?.toString(), viewMode: 'byEmployee' } });
   };
 
   // Render save status indicator
@@ -777,7 +777,7 @@ export const Dashboard = () => {
             {/* Weekly Compliance */}
             <Card
               className={styles.kpiCard}
-              onClick={() => handleKPIClick('approved')}
+              onClick={handleKPIClick}
             >
               <div className={styles.kpiHeader}>
                 <div>
@@ -808,7 +808,7 @@ export const Dashboard = () => {
             {/* Daily Reporting */}
             <Card
               className={styles.kpiCard}
-              onClick={() => handleKPIClick('all')}
+              onClick={handleKPIClick}
             >
               <div className={styles.kpiHeader}>
                 <div>

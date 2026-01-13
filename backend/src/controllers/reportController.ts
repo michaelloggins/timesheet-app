@@ -29,6 +29,7 @@ interface TimeEntryReport {
  */
 export const getTimeEntries = asyncHandler(async (req: Request, res: Response) => {
   const pool = getPool();
+  const currentUser = req.user!;
   const {
     startDate,
     endDate,
@@ -37,6 +38,12 @@ export const getTimeEntries = asyncHandler(async (req: Request, res: Response) =
     projectId,
     status,
   } = req.query;
+
+  // Access control: Standard employees can only see their own data
+  const isPrivileged = ['Manager', 'TimesheetAdmin', 'Leadership'].includes(currentUser.role);
+  const effectiveUserId = isPrivileged
+    ? (userId ? parseInt(userId as string) : null)
+    : currentUser.userId; // Force to current user for standard employees
 
   // Default to current month if no dates provided
   const today = new Date();
@@ -79,9 +86,9 @@ export const getTimeEntries = asyncHandler(async (req: Request, res: Response) =
     request.input('departmentId', parseInt(departmentId as string));
   }
 
-  if (userId) {
+  if (effectiveUserId) {
     query += ' AND u.UserID = @userId';
-    request.input('userId', parseInt(userId as string));
+    request.input('userId', effectiveUserId);
   }
 
   if (projectId) {
@@ -402,9 +409,14 @@ export const getEmployeeSummary = asyncHandler(async (req: Request, res: Respons
 /**
  * Get filter options (departments, projects, users for dropdowns)
  * GET /api/reports/filter-options
+ * Note: Standard employees only see themselves in the user dropdown
  */
 export const getFilterOptions = asyncHandler(async (req: Request, res: Response) => {
   const pool = getPool();
+  const currentUser = req.user!;
+
+  // Access control: Standard employees can only filter by themselves
+  const isPrivileged = ['Manager', 'TimesheetAdmin', 'Leadership'].includes(currentUser.role);
 
   const [departments, projects, users] = await Promise.all([
     pool.request().query(`
@@ -419,22 +431,30 @@ export const getFilterOptions = asyncHandler(async (req: Request, res: Response)
       WHERE IsActive = 1
       ORDER BY ProjectNumber
     `),
-    pool.request().query(`
-      SELECT UserID, Name, Email
-      FROM Users
-      WHERE IsActive = 1
-      ORDER BY Name
-    `),
+    isPrivileged
+      ? pool.request().query(`
+          SELECT UserID, Name, Email
+          FROM Users
+          WHERE IsActive = 1
+          ORDER BY Name
+        `)
+      : pool.request()
+          .input('userId', currentUser.userId)
+          .query(`
+            SELECT UserID, Name, Email
+            FROM Users
+            WHERE UserID = @userId
+          `),
   ]);
 
   res.status(200).json({
     status: 'success',
     data: {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      departments: departments.recordset.map((d: any) => ({
+      departments: isPrivileged ? departments.recordset.map((d: any) => ({
         departmentId: d.DepartmentID,
         departmentName: d.DepartmentName,
-      })),
+      })) : [],
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       projects: projects.recordset.map((p: any) => ({
         projectId: p.ProjectID,
