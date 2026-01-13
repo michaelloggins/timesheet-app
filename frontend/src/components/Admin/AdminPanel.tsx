@@ -49,6 +49,15 @@ import { useDepartments, useCreateDepartment, useUpdateDepartment } from '../../
 import { useHolidays, useCreateHoliday, useUpdateHoliday, useDeleteHoliday } from '../../hooks/useHolidays';
 import { useAuditLogs, AuditLogFilters } from '../../hooks/useAuditLogs';
 import { getActionInfo } from '../../services/auditService';
+
+// Parse date string as local date to avoid timezone shift
+const parseLocalDate = (dateStr: string | Date): Date => {
+  if (dateStr instanceof Date) return dateStr;
+  // Take only the date part (YYYY-MM-DD) and parse as local time
+  const str = dateStr.split('T')[0];
+  const [year, month, day] = str.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
 import { ProjectFormModal } from './ProjectFormModal';
 import { DepartmentFormModal } from './DepartmentFormModal';
 import { HolidayFormModal } from './HolidayFormModal';
@@ -807,9 +816,9 @@ export const AdminPanel = () => {
                             <TableCell>
                               {log.periodStartDate && log.periodEndDate ? (
                                 <span>
-                                  {new Date(log.periodStartDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                  {parseLocalDate(log.periodStartDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                                   {' - '}
-                                  {new Date(log.periodEndDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                  {parseLocalDate(log.periodEndDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                                 </span>
                               ) : '-'}
                             </TableCell>
