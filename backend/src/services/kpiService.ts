@@ -55,28 +55,29 @@ export interface LeaderboardEntry {
 }
 
 /**
- * Calculate the Monday of the current week
+ * Calculate the Sunday of the current week
  */
 function getCurrentWeekStart(): Date {
   const now = new Date();
   const dayOfWeek = now.getDay();
-  const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Monday = 1
-  const monday = new Date(now);
-  monday.setDate(now.getDate() + diff);
-  monday.setHours(0, 0, 0, 0);
-  return monday;
+  const diff = -dayOfWeek; // Sunday = 0
+  const sunday = new Date(now);
+  sunday.setDate(now.getDate() + diff);
+  sunday.setHours(0, 0, 0, 0);
+  return sunday;
 }
 
 /**
- * Calculate the first Monday of the year
+ * Calculate the first Sunday of the year (or last Sunday of previous year if Jan 1 is not Sunday)
  */
-function getYearStartMonday(): Date {
+function getYearStartSunday(): Date {
   const yearStart = new Date(new Date().getFullYear(), 0, 1);
   const dayOfWeek = yearStart.getDay();
-  const diff = dayOfWeek === 0 ? 1 : dayOfWeek === 1 ? 0 : 8 - dayOfWeek;
-  const firstMonday = new Date(yearStart);
-  firstMonday.setDate(yearStart.getDate() + diff);
-  return firstMonday;
+  // Go back to the previous Sunday (or stay if already Sunday)
+  const diff = -dayOfWeek;
+  const firstSunday = new Date(yearStart);
+  firstSunday.setDate(yearStart.getDate() + diff);
+  return firstSunday;
 }
 
 /**
@@ -114,8 +115,8 @@ export async function getPersonalKPIs(userId: number): Promise<PersonalKPIs> {
   today.setHours(0, 0, 0, 0);
 
   // Calculate expected weeks from year start to current week
-  const yearStartMonday = getYearStartMonday();
-  const expectedWeeks = getWeeksBetween(yearStartMonday, currentWeekStart);
+  const yearStartSunday = getYearStartSunday();
+  const expectedWeeks = getWeeksBetween(yearStartSunday, currentWeekStart);
 
   // Calculate expected working days
   const expectedWorkingDays = getWeekdaysBetween(yearStart, today);
@@ -188,8 +189,8 @@ export async function getTeamKPIs(managerEntraId: string): Promise<TeamKPIs | nu
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const yearStartMonday = getYearStartMonday();
-  const expectedWeeksPerEmployee = getWeeksBetween(yearStartMonday, currentWeekStart);
+  const yearStartSunday = getYearStartSunday();
+  const expectedWeeksPerEmployee = getWeeksBetween(yearStartSunday, currentWeekStart);
   const expectedWorkingDaysPerEmployee = getWeekdaysBetween(yearStart, today);
 
   const result = await pool.request()
@@ -304,8 +305,8 @@ export async function getTeamLeaderboard(
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const yearStartMonday = getYearStartMonday();
-  const expectedWeeks = getWeeksBetween(yearStartMonday, currentWeekStart);
+  const yearStartSunday = getYearStartSunday();
+  const expectedWeeks = getWeeksBetween(yearStartSunday, currentWeekStart);
   const expectedDays = getWeekdaysBetween(yearStart, today);
 
   const result = await pool.request()
@@ -456,8 +457,8 @@ export async function getCompanyKPIs(): Promise<CompanyKPIs> {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const yearStartMonday = getYearStartMonday();
-  const expectedWeeksPerEmployee = getWeeksBetween(yearStartMonday, currentWeekStart);
+  const yearStartSunday = getYearStartSunday();
+  const expectedWeeksPerEmployee = getWeeksBetween(yearStartSunday, currentWeekStart);
   const expectedWorkingDaysPerEmployee = getWeekdaysBetween(yearStart, today);
 
   const result = await pool.request()
@@ -540,8 +541,8 @@ export async function getDepartmentLeaderboard(): Promise<DepartmentLeaderboardE
   const currentWeekStart = getCurrentWeekStart();
   const yearStart = new Date(new Date().getFullYear(), 0, 1);
 
-  const yearStartMonday = getYearStartMonday();
-  const expectedWeeks = getWeeksBetween(yearStartMonday, currentWeekStart);
+  const yearStartSunday = getYearStartSunday();
+  const expectedWeeks = getWeeksBetween(yearStartSunday, currentWeekStart);
 
   const result = await pool.request()
     .input('yearStart', yearStart.toISOString().split('T')[0])
@@ -605,8 +606,8 @@ export async function getCompanyLeaderboard(limit: number = 10): Promise<Leaderb
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const yearStartMonday = getYearStartMonday();
-  const expectedWeeks = getWeeksBetween(yearStartMonday, currentWeekStart);
+  const yearStartSunday = getYearStartSunday();
+  const expectedWeeks = getWeeksBetween(yearStartSunday, currentWeekStart);
   const expectedDays = getWeekdaysBetween(yearStart, today);
 
   const result = await pool.request()

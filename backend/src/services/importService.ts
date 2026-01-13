@@ -117,19 +117,19 @@ const parseBoolean = (value: any): boolean => {
 };
 
 /**
- * Get the start of the week (Monday) for a given date
+ * Get the start of the week (Sunday) for a given date
  */
 const getWeekStart = (date: Date): Date => {
   const result = new Date(date);
   const day = result.getDay();
-  const diff = day === 0 ? -6 : 1 - day; // Adjust when day is Sunday
+  const diff = -day; // Sunday is day 0
   result.setDate(result.getDate() + diff);
   result.setHours(0, 0, 0, 0);
   return result;
 };
 
 /**
- * Get the end of the week (Sunday) for a given date
+ * Get the end of the week (Saturday) for a given date
  */
 const getWeekEnd = (weekStart: Date): Date => {
   const result = new Date(weekStart);

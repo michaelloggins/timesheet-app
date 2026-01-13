@@ -5,7 +5,7 @@
 export const getWeekStart = (date: Date): Date => {
   const d = new Date(date);
   const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Monday as week start
+  const diff = d.getDate() - day; // Sunday as week start (day 0)
   return new Date(d.setDate(diff));
 };
 

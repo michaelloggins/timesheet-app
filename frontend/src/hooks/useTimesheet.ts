@@ -72,13 +72,13 @@ export const useTimesheet = (options: UseTimesheetOptions = {}) => {
   const getInitialWeekStart = (): Date => {
     if (initialWeekStart) {
       const date = typeof initialWeekStart === 'string' ? new Date(initialWeekStart) : initialWeekStart;
-      // Normalize to Monday of that week
+      // Normalize to Sunday of that week (consistent with timesheetService)
       const day = date.getDay();
-      const diff = day === 0 ? -6 : 1 - day;
-      const monday = new Date(date);
-      monday.setDate(date.getDate() + diff);
-      monday.setHours(0, 0, 0, 0);
-      return monday;
+      const diff = -day; // Sunday is 0, so subtract day to get to Sunday
+      const sunday = new Date(date);
+      sunday.setDate(date.getDate() + diff);
+      sunday.setHours(0, 0, 0, 0);
+      return sunday;
     }
     return getCurrentWeekStart();
   };
