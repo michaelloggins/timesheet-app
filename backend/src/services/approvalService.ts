@@ -5,6 +5,7 @@
 
 import * as timesheetRepo from '../repositories/timesheetRepository';
 import { AppError } from '../middleware/errorHandler';
+import { logAuditEntry } from '../utils/auditLogger';
 
 export const approveTimesheet = async (
   timesheetId: number,
@@ -36,7 +37,16 @@ export const approveTimesheet = async (
     IsLocked: true,
   });
 
-  // 4. TODO: Log history and send notification
+  // 4. Log audit entry
+  await logAuditEntry({
+    timesheetId,
+    action: 'Approved',
+    actionByUserId: managerId,
+    previousStatus: 'Submitted',
+    newStatus: 'Approved',
+  });
+
+  // TODO: Send notification
   // await notificationService.sendTimesheetApproved(employee.email, timesheet);
 };
 
@@ -65,6 +75,16 @@ export const returnTimesheet = async (
     ReturnReason: returnReason,
   });
 
+  // Log audit entry
+  await logAuditEntry({
+    timesheetId,
+    action: 'Returned',
+    actionByUserId: managerId,
+    notes: returnReason,
+    previousStatus: 'Submitted',
+    newStatus: 'Returned',
+  });
+
   // TODO: Send notification with notes
   // await notificationService.sendTimesheetReturned(employee.email, timesheet, returnReason);
 };
@@ -89,5 +109,13 @@ export const unlockTimesheet = async (
     IsLocked: false,
   });
 
-  // TODO: Log unlock action in audit trail
+  // Log audit entry
+  await logAuditEntry({
+    timesheetId,
+    action: 'Unlocked',
+    actionByUserId: adminId,
+    notes: reason,
+    previousStatus: timesheet.Status,
+    newStatus: timesheet.Status,
+  });
 };

@@ -179,10 +179,20 @@ export const useTimesheet = (options: UseTimesheetOptions = {}) => {
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!timesheet) throw new Error('No timesheet loaded');
+
+      // Refetch to get current status from server
+      const freshData = await refetch();
+      const currentStatus = freshData.data?.status;
+
+      // Only save if in editable state
+      if (currentStatus !== 'Draft' && currentStatus !== 'Returned') {
+        throw new Error(`Cannot save changes - timesheet is ${currentStatus}`);
+      }
+
       return updateTimesheet(timesheet.timesheetId, localEntries);
     },
     onSuccess: (data) => {
-      queryClient.setQueryData(['timesheet', formatDate(weekStart)], data);
+      queryClient.setQueryData(['timesheet', formatDate(weekStart), lazyCreate], data);
       queryClient.invalidateQueries({ queryKey: ['timesheets'] });
     },
   });
@@ -191,25 +201,55 @@ export const useTimesheet = (options: UseTimesheetOptions = {}) => {
   const submitMutation = useMutation({
     mutationFn: async () => {
       if (!timesheet) throw new Error('No timesheet loaded');
-      // Save first, then submit
-      await updateTimesheet(timesheet.timesheetId, localEntries);
+
+      // Refetch to get current status from server
+      const freshData = await refetch();
+      const currentStatus = freshData.data?.status;
+
+      // If already submitted or approved, just return current data
+      if (currentStatus === 'Submitted') {
+        return freshData.data;
+      }
+      if (currentStatus === 'Approved') {
+        throw new Error('Cannot submit an approved timesheet');
+      }
+
+      // Save first (only if Draft or Returned), then submit
+      if (currentStatus === 'Draft' || currentStatus === 'Returned') {
+        await updateTimesheet(timesheet.timesheetId, localEntries);
+      }
       return submitTimesheet(timesheet.timesheetId);
     },
-    onSuccess: (data) => {
-      queryClient.setQueryData(['timesheet', formatDate(weekStart)], data);
+    onSuccess: () => {
+      // Invalidate to force refetch with full data (entries included)
+      queryClient.invalidateQueries({ queryKey: ['timesheet', formatDate(weekStart)] });
       queryClient.invalidateQueries({ queryKey: ['timesheets'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 
-  // Withdraw mutation (return submitted timesheet to draft)
+  // Withdraw mutation (return submitted/returned timesheet to draft)
   const withdrawMutation = useMutation({
     mutationFn: async () => {
       if (!timesheet) throw new Error('No timesheet loaded');
+
+      // Refetch to get current status from server
+      const freshData = await refetch();
+      const currentStatus = freshData.data?.status;
+
+      // If already draft, just return current data
+      if (currentStatus === 'Draft') {
+        return freshData.data;
+      }
+      if (currentStatus === 'Approved') {
+        throw new Error('Approved timesheets cannot be withdrawn. Ask your manager to unlock it.');
+      }
+
       return withdrawTimesheet(timesheet.timesheetId);
     },
-    onSuccess: (data) => {
-      queryClient.setQueryData(['timesheet', formatDate(weekStart)], data);
+    onSuccess: () => {
+      // Invalidate to force refetch with full data (entries included)
+      queryClient.invalidateQueries({ queryKey: ['timesheet', formatDate(weekStart)] });
       queryClient.invalidateQueries({ queryKey: ['timesheets'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
@@ -344,8 +384,8 @@ export const useTimesheet = (options: UseTimesheetOptions = {}) => {
 
   const submitBlockedReason = submitTimeCheck.reason;
 
-  // Can withdraw (only if submitted, not yet approved)
-  const canWithdraw = timesheet?.status === 'Submitted';
+  // Can withdraw (if submitted or returned, not yet approved)
+  const canWithdraw = timesheet?.status === 'Submitted' || timesheet?.status === 'Returned';
 
   return {
     // State

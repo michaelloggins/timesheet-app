@@ -28,6 +28,9 @@ import {
   MenuPopover,
   MenuList,
   MenuItem,
+  Dropdown,
+  Option,
+  Field,
 } from '@fluentui/react-components';
 import {
   AddRegular,
@@ -38,11 +41,14 @@ import {
   PersonRegular,
   CheckmarkCircleRegular,
   DismissCircleRegular,
+  HistoryRegular,
 } from '@fluentui/react-icons';
 import { useProjects, useCreateProject, useUpdateProject, useDeactivateProject } from '../../hooks/useProjects';
 import { useUsers, useSyncUsers } from '../../hooks/useUsers';
 import { useDepartments, useCreateDepartment, useUpdateDepartment } from '../../hooks/useDepartments';
 import { useHolidays, useCreateHoliday, useUpdateHoliday, useDeleteHoliday } from '../../hooks/useHolidays';
+import { useAuditLogs, AuditLogFilters } from '../../hooks/useAuditLogs';
+import { getActionInfo } from '../../services/auditService';
 import { ProjectFormModal } from './ProjectFormModal';
 import { DepartmentFormModal } from './DepartmentFormModal';
 import { HolidayFormModal } from './HolidayFormModal';
@@ -77,6 +83,25 @@ const useStyles = makeStyles({
     display: 'flex',
     gap: tokens.spacingHorizontalS,
   },
+  filters: {
+    display: 'flex',
+    gap: tokens.spacingHorizontalL,
+    alignItems: 'flex-end',
+    marginBottom: tokens.spacingVerticalM,
+    flexWrap: 'wrap',
+  },
+  filterField: {
+    minWidth: '150px',
+  },
+  auditMeta: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '2px',
+  },
+  auditMetaSecondary: {
+    fontSize: tokens.fontSizeBase200,
+    color: tokens.colorNeutralForeground3,
+  },
 });
 
 
@@ -89,6 +114,7 @@ export const AdminPanel = () => {
   const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
   const [isHolidayModalOpen, setIsHolidayModalOpen] = useState(false);
   const [editingHoliday, setEditingHoliday] = useState<Holiday | null>(null);
+  const [auditFilters, setAuditFilters] = useState<AuditLogFilters>({ days: 30, limit: 100 });
 
   // React Query hooks - Projects
   const { data: projects, isLoading: projectsLoading, error: projectsError } = useProjects();
@@ -110,6 +136,9 @@ export const AdminPanel = () => {
   const createHoliday = useCreateHoliday();
   const updateHoliday = useUpdateHoliday();
   const deleteHoliday = useDeleteHoliday();
+
+  // React Query hooks - Audit Logs
+  const { logs: auditLogs, isLoading: auditLoading, error: auditError } = useAuditLogs(auditFilters);
 
   const handleCreateProject = () => {
     setEditingProject(null);
@@ -228,6 +257,7 @@ export const AdminPanel = () => {
         <Tab key="departments" value="departments">Departments</Tab>
         <Tab key="holidays" value="holidays">Holidays</Tab>
         <Tab key="users" value="users">Users</Tab>
+        <Tab key="audit" value="audit" icon={<HistoryRegular />}>Audit Log</Tab>
         <Tab key="settings" value="settings">Settings</Tab>
       </TabList>
 
@@ -661,6 +691,138 @@ export const AdminPanel = () => {
                       <TableRow>
                         <TableCell colSpan={7} style={{ textAlign: 'center', padding: '2rem' }}>
                           No users found. Click "Sync from Entra ID" to import users from security groups.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </>
+        )}
+
+        {selectedTab === 'audit' && (
+          <>
+            <div className={styles.header}>
+              <Title3>Audit Log</Title3>
+            </div>
+
+            <div className={styles.filters}>
+              <Field label="Time Period" className={styles.filterField}>
+                <Dropdown
+                  value={auditFilters.days === 7 ? 'Last 7 days' : auditFilters.days === 30 ? 'Last 30 days' : auditFilters.days === 90 ? 'Last 90 days' : 'All time'}
+                  onOptionSelect={(_, data) => {
+                    const daysMap: Record<string, number | undefined> = {
+                      'Last 7 days': 7,
+                      'Last 30 days': 30,
+                      'Last 90 days': 90,
+                      'All time': undefined,
+                    };
+                    setAuditFilters({ ...auditFilters, days: daysMap[data.optionText || ''] });
+                  }}
+                >
+                  <Option>Last 7 days</Option>
+                  <Option>Last 30 days</Option>
+                  <Option>Last 90 days</Option>
+                  <Option>All time</Option>
+                </Dropdown>
+              </Field>
+
+              <Field label="Action Type" className={styles.filterField}>
+                <Dropdown
+                  value={auditFilters.action || 'All actions'}
+                  onOptionSelect={(_, data) => {
+                    const action = data.optionText === 'All actions' ? undefined : data.optionText;
+                    setAuditFilters({ ...auditFilters, action });
+                  }}
+                >
+                  <Option>All actions</Option>
+                  <Option>Created</Option>
+                  <Option>Submitted</Option>
+                  <Option>Approved</Option>
+                  <Option>Returned</Option>
+                  <Option>Withdrawn</Option>
+                  <Option>Unlocked</Option>
+                  <Option>Modified</Option>
+                </Dropdown>
+              </Field>
+            </div>
+
+            {auditError && (
+              <MessageBar intent="error">
+                <MessageBarBody>
+                  <MessageBarTitle>Error Loading Audit Logs</MessageBarTitle>
+                  {auditError instanceof Error ? auditError.message : 'Failed to load audit logs'}
+                </MessageBarBody>
+              </MessageBar>
+            )}
+
+            {auditLoading ? (
+              <Spinner label="Loading audit logs..." />
+            ) : (
+              <div className={styles.tableContainer}>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHeaderCell>Date & Time</TableHeaderCell>
+                      <TableHeaderCell>Action</TableHeaderCell>
+                      <TableHeaderCell>Performed By</TableHeaderCell>
+                      <TableHeaderCell>Timesheet Owner</TableHeaderCell>
+                      <TableHeaderCell>Period</TableHeaderCell>
+                      <TableHeaderCell>Notes</TableHeaderCell>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {auditLogs && auditLogs.length > 0 ? (
+                      auditLogs.map((log) => {
+                        const actionInfo = getActionInfo(log.action);
+                        return (
+                          <TableRow key={log.historyId}>
+                            <TableCell>
+                              <div className={styles.auditMeta}>
+                                <span>{new Date(log.actionDate).toLocaleDateString()}</span>
+                                <span className={styles.auditMetaSecondary}>
+                                  {new Date(log.actionDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                appearance="filled"
+                                color={actionInfo.color}
+                                className={styles.badge}
+                              >
+                                {actionInfo.label}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className={styles.auditMeta}>
+                                <span>{log.actionBy.name}</span>
+                                <span className={styles.auditMetaSecondary}>{log.actionBy.email}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {log.timesheetOwner?.name || '-'}
+                            </TableCell>
+                            <TableCell>
+                              {log.periodStartDate && log.periodEndDate ? (
+                                <span>
+                                  {new Date(log.periodStartDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                  {' - '}
+                                  {new Date(log.periodEndDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                </span>
+                              ) : '-'}
+                            </TableCell>
+                            <TableCell>
+                              {log.notes || '-'}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={6} style={{ textAlign: 'center', padding: '2rem' }}>
+                          No audit logs found for the selected filters.
                         </TableCell>
                       </TableRow>
                     )}

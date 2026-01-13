@@ -3,8 +3,9 @@
  * Time entries report with filtering, sorting, grouping, and export
  */
 
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useLocation } from 'react-router-dom';
 import {
   Title2,
   Card,
@@ -273,6 +274,10 @@ type SortDir = 'asc' | 'desc';
 export const Reports = () => {
   const styles = useStyles();
   const { isAdmin } = useCurrentUser();
+  const location = useLocation();
+
+  // Get initial state from navigation (e.g., from Dashboard leaderboard click)
+  const navState = location.state as { userId?: string; viewMode?: ViewMode } | null;
 
   // Filter state
   const today = new Date();
@@ -280,13 +285,23 @@ export const Reports = () => {
   const [startDate, setStartDate] = useState(firstOfMonth.toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState(today.toISOString().split('T')[0]);
   const [departmentId, setDepartmentId] = useState<string>('');
-  const [userId, setUserId] = useState<string>('');
+  const [userId, setUserId] = useState<string>(navState?.userId || '');
   const [projectId, setProjectId] = useState<string>('');
 
   // View and sort state
-  const [viewMode, setViewMode] = useState<ViewMode>('flat');
+  const [viewMode, setViewMode] = useState<ViewMode>(navState?.viewMode || 'flat');
   const [sortField, setSortField] = useState<SortField>('workDate');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
+
+  // Apply navigation state on mount (for when navigating with employee filter)
+  useEffect(() => {
+    if (navState?.userId) {
+      setUserId(navState.userId);
+    }
+    if (navState?.viewMode) {
+      setViewMode(navState.viewMode);
+    }
+  }, []);
 
   // Print dialog state
   const [showPrintDialog, setShowPrintDialog] = useState(false);

@@ -3,7 +3,7 @@
  * User avatar with dropdown menu showing profile info and logout
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useMsal } from '@azure/msal-react';
 import {
   Avatar,
@@ -27,6 +27,7 @@ import {
 } from '@fluentui/react-icons';
 import { useCurrentUser } from '../../hooks/useCurrentUser';
 import { graphScopes } from '../../config/authConfig';
+import { apiClient } from '../../services/api';
 
 const useStyles = makeStyles({
   trigger: {
@@ -134,30 +135,54 @@ export const UserProfileMenu = () => {
   const { user } = useCurrentUser();
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const syncAttempted = useRef(false);
 
-  // Fetch user photo from Microsoft Graph
+  // Fetch user photo from backend (cached) or sync from Graph
   useEffect(() => {
     const fetchPhoto = async () => {
-      if (!accounts[0]) return;
+      if (!user?.userId) return;
 
+      // Try to load from our backend first (fast, cached)
       try {
-        const response = await instance.acquireTokenSilent({
-          scopes: graphScopes.scopes,
-          account: accounts[0],
+        const response = await apiClient.get(`/auth/avatar`, {
+          responseType: 'blob',
         });
-
-        const photoResponse = await fetch('https://graph.microsoft.com/v1.0/me/photo/$value', {
-          headers: {
-            Authorization: `Bearer ${response.accessToken}`,
-          },
-        });
-
-        if (photoResponse.ok) {
-          const blob = await photoResponse.blob();
+        if (response.status === 200) {
+          const blob = response.data;
           setPhotoUrl(URL.createObjectURL(blob));
+          return;
         }
       } catch {
-        // Photo not available, will use initials
+        // Avatar not cached yet, continue to sync
+      }
+
+      // If no cached avatar and we haven't tried syncing yet, sync from Graph
+      if (!syncAttempted.current && accounts[0]) {
+        syncAttempted.current = true;
+
+        try {
+          // Get Graph token
+          const tokenResponse = await instance.acquireTokenSilent({
+            scopes: graphScopes.scopes,
+            account: accounts[0],
+          });
+
+          // Send token to backend to sync avatar
+          await apiClient.post('/auth/avatar/sync', {
+            accessToken: tokenResponse.accessToken,
+          });
+
+          // Now try to load the cached avatar again
+          const avatarResponse = await apiClient.get(`/auth/avatar`, {
+            responseType: 'blob',
+          });
+          if (avatarResponse.status === 200) {
+            const blob = avatarResponse.data;
+            setPhotoUrl(URL.createObjectURL(blob));
+          }
+        } catch {
+          // Photo not available, will use initials
+        }
       }
     };
 
@@ -170,7 +195,7 @@ export const UserProfileMenu = () => {
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accounts, instance]);
+  }, [user?.userId, accounts, instance]);
 
   const handleLogout = () => {
     setIsOpen(false);

@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { asyncHandler } from '../middleware/errorHandler';
 import { getPool } from '../config/database';
 import { logger } from '../utils/logger';
+import { logAuditEntry } from '../utils/auditLogger';
 
 /**
  * Get current user's timesheets
@@ -526,6 +527,8 @@ export const submitTimesheet = asyncHandler(async (req: Request, res: Response) 
     return;
   }
 
+  const previousStatus = ts.Status;
+
   // Update status
   await pool.request()
     .input('timesheetId', timesheetId)
@@ -534,6 +537,15 @@ export const submitTimesheet = asyncHandler(async (req: Request, res: Response) 
       SET Status = 'Submitted', SubmittedDate = GETUTCDATE()
       WHERE TimesheetID = @timesheetId
     `);
+
+  // Log audit entry
+  await logAuditEntry({
+    timesheetId,
+    action: 'Submitted',
+    actionByUserId: userId,
+    previousStatus,
+    newStatus: 'Submitted',
+  });
 
   logger.info(`Timesheet ${timesheetId} submitted by user ${userId}`);
 
@@ -600,6 +612,8 @@ export const withdrawTimesheet = asyncHandler(async (req: Request, res: Response
     return;
   }
 
+  const previousStatus = ts.Status;
+
   // Update status back to Draft and clear submission/return info
   await pool.request()
     .input('timesheetId', timesheetId)
@@ -608,6 +622,15 @@ export const withdrawTimesheet = asyncHandler(async (req: Request, res: Response
       SET Status = 'Draft', SubmittedDate = NULL, ReturnReason = NULL, ModifiedDate = GETUTCDATE()
       WHERE TimesheetID = @timesheetId
     `);
+
+  // Log audit entry
+  await logAuditEntry({
+    timesheetId,
+    action: 'Withdrawn',
+    actionByUserId: userId,
+    previousStatus,
+    newStatus: 'Draft',
+  });
 
   logger.info(`Timesheet ${timesheetId} withdrawn by user ${userId}`);
 

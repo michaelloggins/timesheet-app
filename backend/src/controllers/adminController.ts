@@ -207,8 +207,79 @@ export const updateSystemConfig = asyncHandler(async (req: Request, res: Respons
 });
 
 export const getAuditLogs = asyncHandler(async (req: Request, res: Response) => {
-  // TODO: Implement
-  res.status(200).json({ status: 'success', data: [], message: 'To be implemented' });
+  const pool = getPool();
+
+  // Query parameters for filtering
+  const {
+    days = 30,      // Default to last 30 days
+    userId,         // Filter by specific user
+    action,         // Filter by action type
+    limit = 100     // Max records to return
+  } = req.query;
+
+  const request = pool.request()
+    .input('days', parseInt(days as string))
+    .input('limit', Math.min(parseInt(limit as string), 500)); // Cap at 500
+
+  let whereClause = 'WHERE h.ActionDate >= DATEADD(DAY, -@days, GETUTCDATE())';
+
+  if (userId) {
+    request.input('userId', parseInt(userId as string));
+    whereClause += ' AND (t.UserID = @userId OR h.ActionByUserID = @userId)';
+  }
+
+  if (action) {
+    request.input('action', action);
+    whereClause += ' AND h.Action = @action';
+  }
+
+  const result = await request.query(`
+    SELECT TOP (@limit)
+      h.HistoryID,
+      h.TimesheetID,
+      h.Action,
+      h.ActionDate,
+      h.Notes,
+      h.PreviousStatus,
+      h.NewStatus,
+      h.ActionByUserID,
+      actor.Name AS ActionByName,
+      actor.Email AS ActionByEmail,
+      t.UserID AS TimesheetOwnerID,
+      owner.Name AS TimesheetOwnerName,
+      t.PeriodStartDate,
+      t.PeriodEndDate
+    FROM TimesheetHistory h
+    INNER JOIN Users actor ON h.ActionByUserID = actor.UserID
+    LEFT JOIN Timesheets t ON h.TimesheetID = t.TimesheetID
+    LEFT JOIN Users owner ON t.UserID = owner.UserID
+    ${whereClause}
+    ORDER BY h.ActionDate DESC
+  `);
+
+  res.status(200).json({
+    status: 'success',
+    data: result.recordset.map(row => ({
+      historyId: row.HistoryID,
+      timesheetId: row.TimesheetID,
+      action: row.Action,
+      actionDate: row.ActionDate,
+      notes: row.Notes,
+      previousStatus: row.PreviousStatus,
+      newStatus: row.NewStatus,
+      actionBy: {
+        userId: row.ActionByUserID,
+        name: row.ActionByName,
+        email: row.ActionByEmail,
+      },
+      timesheetOwner: row.TimesheetOwnerID ? {
+        userId: row.TimesheetOwnerID,
+        name: row.TimesheetOwnerName,
+      } : null,
+      periodStartDate: row.PeriodStartDate,
+      periodEndDate: row.PeriodEndDate,
+    }))
+  });
 });
 
 /**

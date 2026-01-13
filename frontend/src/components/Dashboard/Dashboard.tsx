@@ -944,7 +944,17 @@ export const Dashboard = () => {
                     </div>
 
                     <div className={styles.employeeInfo}>
-                      <Body1Strong>{entry.employeeName}</Body1Strong>
+                      <Body1Strong
+                        style={{ cursor: 'pointer', textDecoration: 'underline', textDecorationColor: 'transparent' }}
+                        onClick={(e: React.MouseEvent) => {
+                          e.stopPropagation();
+                          navigate('/reports', { state: { userId: entry.userId.toString(), viewMode: 'byEmployee' } });
+                        }}
+                        onMouseOver={(e: React.MouseEvent<HTMLElement>) => (e.currentTarget.style.textDecorationColor = '#286f1f')}
+                        onMouseOut={(e: React.MouseEvent<HTMLElement>) => (e.currentTarget.style.textDecorationColor = 'transparent')}
+                      >
+                        {entry.employeeName}
+                      </Body1Strong>
                       <Caption1>
                         Weekly: {entry.weeklyComplianceRate.toFixed(0)}% | Daily: {entry.dailyReportingRate.toFixed(0)}%
                       </Caption1>
