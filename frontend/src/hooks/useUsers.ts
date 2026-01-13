@@ -12,6 +12,7 @@ export interface User {
   EmployeeID?: string;
   Email: string;
   Name: string;
+  Title?: string;
   DepartmentID: number;
   DepartmentName?: string;
   Role: 'Employee' | 'Manager' | 'TimesheetAdmin' | 'Leadership';

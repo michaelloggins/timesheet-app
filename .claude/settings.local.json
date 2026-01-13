@@ -52,7 +52,8 @@
       "Bash(node:*)",
       "Bash(npx swa:*)",
       "Bash(npx @azure/static-web-apps-cli deploy frontend/dist --env production)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(sqlcmd -S sql-miravista-prod.database.windows.net -d TimesheetDB -U sqladmin -P \"MiraVista2026!Secure#DB\" -i \"C:\\\\Projects\\\\Timesheet App\\\\database\\\\migrations\\\\006_add_user_title_and_hris_ids.sql\" -b)"
     ],
     "deny": [],
     "ask": []

@@ -444,6 +444,7 @@ class UserSyncService {
             .input('entraId', entraId)
             .input('email', email)
             .input('name', user.displayName)
+            .input('title', user.jobTitle || null)
             .input('departmentId', departmentId)
             .input('role', role)
             .input('managerEntraId', managerEntraId)
@@ -452,6 +453,7 @@ class UserSyncService {
               UPDATE Users
               SET Email = @email,
                   Name = @name,
+                  Title = @title,
                   DepartmentID = @departmentId,
                   Role = @role,
                   ManagerEntraID = @managerEntraId,
@@ -471,13 +473,14 @@ class UserSyncService {
             .input('entraId', entraId)
             .input('email', email)
             .input('name', user.displayName)
+            .input('title', user.jobTitle || null)
             .input('departmentId', departmentId)
             .input('role', role)
             .input('managerEntraId', managerEntraId)
             .input('employeeId', user.employeeId || null)
             .query(`
-              INSERT INTO Users (EntraIDObjectID, Email, Name, DepartmentID, Role, ManagerEntraID, EmployeeID)
-              VALUES (@entraId, @email, @name, @departmentId, @role, @managerEntraId, @employeeId)
+              INSERT INTO Users (EntraIDObjectID, Email, Name, Title, DepartmentID, Role, ManagerEntraID, EmployeeID)
+              VALUES (@entraId, @email, @name, @title, @departmentId, @role, @managerEntraId, @employeeId)
             `);
 
           result.created++;
@@ -568,6 +571,7 @@ class UserSyncService {
           .input('entraId', entraId)
           .input('email', email)
           .input('name', user.displayName)
+          .input('title', user.jobTitle || null)
           .input('departmentId', departmentId)
           .input('managerEntraId', managerEntraId)
           .input('employeeId', user.employeeId || null)
@@ -575,6 +579,7 @@ class UserSyncService {
             UPDATE Users
             SET Email = @email,
                 Name = @name,
+                Title = @title,
                 DepartmentID = @departmentId,
                 ManagerEntraID = @managerEntraId,
                 EmployeeID = @employeeId
@@ -585,13 +590,14 @@ class UserSyncService {
           .input('entraId', entraId)
           .input('email', email)
           .input('name', user.displayName)
+          .input('title', user.jobTitle || null)
           .input('departmentId', departmentId)
           .input('role', 'Employee')
           .input('managerEntraId', managerEntraId)
           .input('employeeId', user.employeeId || null)
           .query(`
-            INSERT INTO Users (EntraIDObjectID, Email, Name, DepartmentID, Role, ManagerEntraID, EmployeeID)
-            VALUES (@entraId, @email, @name, @departmentId, @role, @managerEntraId, @employeeId)
+            INSERT INTO Users (EntraIDObjectID, Email, Name, Title, DepartmentID, Role, ManagerEntraID, EmployeeID)
+            VALUES (@entraId, @email, @name, @title, @departmentId, @role, @managerEntraId, @employeeId)
           `);
       }
 

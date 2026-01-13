@@ -7,9 +7,9 @@ import { logger } from '../utils/logger';
 export const getUsers = asyncHandler(async (req: Request, res: Response) => {
   const pool = getPool();
   const result = await pool.request().query(`
-    SELECT u.UserID, u.EntraIDObjectID, u.EmployeeID, u.Email, u.Name, u.DepartmentID,
-           u.Role, u.IsActive, u.ManagerEntraID, u.CreatedDate, u.LastLoginDate,
-           u.DeactivatedDate, u.DeactivationReason,
+    SELECT u.UserID, u.EntraIDObjectID, u.EmployeeID, u.Email, u.Name, u.Title,
+           u.DepartmentID, u.Role, u.IsActive, u.ManagerEntraID,
+           u.CreatedDate, u.LastLoginDate, u.DeactivatedDate, u.DeactivationReason,
            d.DepartmentName,
            m.Name as ManagerName, m.Email as ManagerEmail
     FROM Users u
