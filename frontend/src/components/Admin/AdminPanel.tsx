@@ -48,7 +48,7 @@ import {
   HistoryRegular,
 } from '@fluentui/react-icons';
 import { useProjects, useCreateProject, useUpdateProject, useDeactivateProject } from '../../hooks/useProjects';
-import { useUsers, useSyncUsers } from '../../hooks/useUsers';
+import { useUsers, useSyncUsers, User } from '../../hooks/useUsers';
 import { useDepartments, useCreateDepartment, useUpdateDepartment } from '../../hooks/useDepartments';
 import { useHolidays, useCreateHoliday, useUpdateHoliday, useDeleteHoliday } from '../../hooks/useHolidays';
 import { useAuditLogs, AuditLogFilters } from '../../hooks/useAuditLogs';
@@ -65,6 +65,7 @@ const parseLocalDate = (dateStr: string | Date): Date => {
 import { ProjectFormModal } from './ProjectFormModal';
 import { DepartmentFormModal } from './DepartmentFormModal';
 import { HolidayFormModal } from './HolidayFormModal';
+import { UserDetailsModal } from './UserDetailsModal';
 import { Project } from '../../types';
 import { CreateProjectDto } from '../../services/projectService';
 import { Department, CreateDepartmentDto } from '../../services/departmentService';
@@ -106,6 +107,12 @@ const useStyles = makeStyles({
   filterField: {
     minWidth: '150px',
   },
+  clickableRow: {
+    cursor: 'pointer',
+    ':hover': {
+      backgroundColor: tokens.colorNeutralBackground1Hover,
+    },
+  },
 });
 
 
@@ -119,6 +126,7 @@ export const AdminPanel = () => {
   const [isHolidayModalOpen, setIsHolidayModalOpen] = useState(false);
   const [editingHoliday, setEditingHoliday] = useState<Holiday | null>(null);
   const [auditFilters, setAuditFilters] = useState<AuditLogFilters>({ days: 30, limit: 100 });
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
   // React Query hooks - Projects
   const { data: projects, isLoading: projectsLoading, error: projectsError } = useProjects();
@@ -650,7 +658,11 @@ export const AdminPanel = () => {
                   <TableBody>
                     {users && users.length > 0 ? (
                       users.map((user) => (
-                        <TableRow key={user.UserID}>
+                        <TableRow
+                          key={user.UserID}
+                          className={styles.clickableRow}
+                          onClick={() => setSelectedUser(user)}
+                        >
                           <TableCell>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                               <PersonRegular />
@@ -848,6 +860,13 @@ export const AdminPanel = () => {
           </MessageBar>
         )}
       </div>
+
+      {/* User Details Modal */}
+      <UserDetailsModal
+        open={selectedUser !== null}
+        onClose={() => setSelectedUser(null)}
+        user={selectedUser}
+      />
     </div>
   );
 };

@@ -9,6 +9,7 @@ import { apiClient } from '../services/api';
 export interface User {
   UserID: number;
   EntraIDObjectID: string;
+  EmployeeID?: string;
   Email: string;
   Name: string;
   DepartmentID: number;
@@ -17,6 +18,7 @@ export interface User {
   IsActive: boolean;
   ManagerEntraID?: string;
   ManagerName?: string;
+  ManagerEmail?: string;
   CreatedDate: string;
   LastLoginDate?: string;
   DeactivatedDate?: string;
