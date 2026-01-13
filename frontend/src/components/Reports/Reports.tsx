@@ -316,7 +316,7 @@ export const Reports = () => {
     },
   });
 
-  const entries: TimeEntry[] = reportData?.data || [];
+  const entries: TimeEntry[] = useMemo(() => reportData?.data || [], [reportData?.data]);
   const meta = reportData?.meta;
 
   // Sort entries

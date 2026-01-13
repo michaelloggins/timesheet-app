@@ -112,7 +112,7 @@ export interface TimeEntryFormData {
 }
 
 // API Response Types
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   status: 'success' | 'error';
   message?: string;
   data?: T;
