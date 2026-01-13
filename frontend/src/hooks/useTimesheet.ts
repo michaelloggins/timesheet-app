@@ -6,6 +6,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
+  getTimesheetForWeek,
   getOrCreateTimesheetForWeek,
   updateTimesheet,
   submitTimesheet,
@@ -28,6 +29,7 @@ export interface UseTimesheetOptions {
   initialWeekStart?: Date | string;
   autoSave?: boolean; // Enable auto-save (default: true)
   autoSaveDelay?: number; // Delay in ms (default: 1500)
+  lazyCreate?: boolean; // Only create timesheet when user adds entry (default: false)
 }
 
 export interface UseTimesheetReturn {
@@ -61,17 +63,25 @@ export interface UseTimesheetReturn {
 }
 
 export const useTimesheet = (options: UseTimesheetOptions = {}) => {
-  const { projects = [], initialWeekStart, autoSave = true, autoSaveDelay = 1500 } = options;
+  const { projects = [], initialWeekStart, autoSave = true, autoSaveDelay = 1500, lazyCreate = false } = options;
   const queryClient = useQueryClient();
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastSavedEntriesRef = useRef<string>('');
 
+  // Parse date string as local time (not UTC) to avoid timezone shift
+  const parseLocalDate = (dateStr: string | Date): Date => {
+    if (dateStr instanceof Date) return dateStr;
+    const str = dateStr.split('T')[0];
+    const [year, month, day] = str.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  };
+
   // Determine initial week start
   const getInitialWeekStart = (): Date => {
     if (initialWeekStart) {
-      const date = typeof initialWeekStart === 'string' ? new Date(initialWeekStart) : initialWeekStart;
+      const date = parseLocalDate(initialWeekStart);
       // Normalize to Sunday of that week (consistent with timesheetService)
       const day = date.getDay();
       const diff = -day; // Sunday is 0, so subtract day to get to Sunday
@@ -90,15 +100,27 @@ export const useTimesheet = (options: UseTimesheetOptions = {}) => {
   const weekDates = getWeekDates(weekStart);
 
   // Fetch timesheet for current week
+  // If lazyCreate is true, just check if it exists (don't create)
   const {
     data: timesheet,
     isLoading,
     error,
     refetch,
   } = useQuery({
-    queryKey: ['timesheet', formatDate(weekStart)],
-    queryFn: () => getOrCreateTimesheetForWeek(formatDate(weekStart)),
+    queryKey: ['timesheet', formatDate(weekStart), lazyCreate],
+    queryFn: () => lazyCreate
+      ? getTimesheetForWeek(formatDate(weekStart))
+      : getOrCreateTimesheetForWeek(formatDate(weekStart)),
     staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
+  // Mutation to create timesheet when needed (for lazy create mode)
+  const createTimesheetMutation = useMutation({
+    mutationFn: () => getOrCreateTimesheetForWeek(formatDate(weekStart)),
+    onSuccess: (data) => {
+      queryClient.setQueryData(['timesheet', formatDate(weekStart), lazyCreate], data);
+      queryClient.invalidateQueries({ queryKey: ['timesheets'] });
+    },
   });
 
   // Update local entries when timesheet data changes
@@ -220,7 +242,12 @@ export const useTimesheet = (options: UseTimesheetOptions = {}) => {
   }, []);
 
   // Add or update entry
-  const addOrUpdateEntry = useCallback((entry: Partial<TimeEntry>) => {
+  const addOrUpdateEntry = useCallback(async (entry: Partial<TimeEntry>) => {
+    // In lazy create mode, create timesheet if it doesn't exist
+    if (lazyCreate && !timesheet) {
+      await createTimesheetMutation.mutateAsync();
+    }
+
     setLocalEntries((current) => {
       // Check if entry exists for this project and date
       const existingIndex = current.findIndex(
@@ -246,7 +273,7 @@ export const useTimesheet = (options: UseTimesheetOptions = {}) => {
         return [...current, newEntry];
       }
     });
-  }, [timesheet]);
+  }, [timesheet, lazyCreate, createTimesheetMutation]);
 
   // Remove entry
   const removeEntry = useCallback((entryId: number) => {

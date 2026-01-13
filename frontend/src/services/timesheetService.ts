@@ -42,6 +42,14 @@ export const getTimesheet = async (timesheetId: number): Promise<Timesheet> => {
 };
 
 /**
+ * Get timesheet for a specific week (returns null if doesn't exist)
+ */
+export const getTimesheetForWeek = async (weekStartDate: string): Promise<Timesheet | null> => {
+  const response = await apiClient.get<ApiResponse<Timesheet | null>>(`/timesheets/week/${weekStartDate}`);
+  return response.data.data;
+};
+
+/**
  * Get or create timesheet for a specific week
  */
 export const getOrCreateTimesheetForWeek = async (weekStartDate: string): Promise<Timesheet> => {

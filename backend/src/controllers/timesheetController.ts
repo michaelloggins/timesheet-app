@@ -63,6 +63,91 @@ export const getUserTimesheets = asyncHandler(async (req: Request, res: Response
 });
 
 /**
+ * Get timesheet for a specific week (without creating)
+ * GET /api/timesheets/week/:startDate
+ */
+export const getTimesheetForWeek = asyncHandler(async (req: Request, res: Response) => {
+  const pool = getPool();
+  const userId = req.user!.userId;
+  const { startDate: weekStartDate } = req.params;
+
+  if (!weekStartDate) {
+    res.status(400).json({ status: 'error', message: 'startDate parameter is required' });
+    return;
+  }
+
+  // Parse date
+  const startDate = new Date(weekStartDate);
+
+  // Check if timesheet exists
+  const result = await pool.request()
+    .input('userId', userId)
+    .input('startDate', startDate)
+    .query(`
+      SELECT TimesheetID FROM Timesheets
+      WHERE UserID = @userId AND PeriodStartDate = @startDate
+    `);
+
+  if (result.recordset.length === 0) {
+    // No timesheet exists - return null
+    res.status(200).json({ status: 'success', data: null });
+    return;
+  }
+
+  const timesheetId = result.recordset[0].TimesheetID;
+
+  // Fetch the complete timesheet
+  const tsResult = await pool.request()
+    .input('timesheetId', timesheetId)
+    .query(`
+      SELECT
+        TimesheetID, UserID, PeriodStartDate, PeriodEndDate,
+        Status, SubmittedDate, ApprovedDate, ApprovedByUserID,
+        ReturnReason, IsLocked
+      FROM Timesheets
+      WHERE TimesheetID = @timesheetId
+    `);
+
+  const ts = tsResult.recordset[0];
+
+  // Get entries
+  const entriesResult = await pool.request()
+    .input('timesheetId', timesheetId)
+    .query(`
+      SELECT
+        TimeEntryID, TimesheetID, ProjectID, WorkDate,
+        HoursWorked, WorkLocation, Notes
+      FROM TimeEntries
+      WHERE TimesheetID = @timesheetId
+      ORDER BY WorkDate, ProjectID
+    `);
+
+  const timesheet = {
+    timesheetId: ts.TimesheetID,
+    userId: ts.UserID,
+    periodStartDate: ts.PeriodStartDate,
+    periodEndDate: ts.PeriodEndDate,
+    status: ts.Status,
+    submittedDate: ts.SubmittedDate,
+    approvedDate: ts.ApprovedDate,
+    approvedByUserId: ts.ApprovedByUserID,
+    returnReason: ts.ReturnReason,
+    isLocked: ts.IsLocked,
+    entries: entriesResult.recordset.map(e => ({
+      timeEntryId: e.TimeEntryID,
+      timesheetId: e.TimesheetID,
+      projectId: e.ProjectID,
+      workDate: e.WorkDate,
+      hoursWorked: parseFloat(e.HoursWorked),
+      workLocation: e.WorkLocation,
+      notes: e.Notes,
+    })),
+  };
+
+  res.status(200).json({ status: 'success', data: timesheet });
+});
+
+/**
  * Get or create timesheet for a specific week
  * POST /api/timesheets/week
  */

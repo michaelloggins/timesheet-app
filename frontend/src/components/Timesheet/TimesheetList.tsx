@@ -371,9 +371,16 @@ export const TimesheetList = () => {
     selectedStatuses.length === 0 || selectedStatuses.includes(ts.status as TimesheetStatus)
   );
 
+  // Parse date as local time (not UTC) to avoid timezone shift issues
+  const parseLocalDate = (dateStr: string) => {
+    const str = typeof dateStr === 'string' ? dateStr.split('T')[0] : dateStr;
+    const [year, month, day] = String(str).split('-').map(Number);
+    return new Date(year, month - 1, day);
+  };
+
   // Group timesheets by month
   const groupedByMonth = filteredTimesheets.reduce((acc, ts) => {
-    const date = new Date(ts.periodStartDate);
+    const date = parseLocalDate(ts.periodStartDate as string);
     const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
     const monthLabel = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
 
@@ -419,8 +426,8 @@ export const TimesheetList = () => {
   };
 
   const formatWeekRange = (start: string, end: string): string => {
-    const startDate = new Date(start);
-    const endDate = new Date(end);
+    const startDate = parseLocalDate(start);
+    const endDate = parseLocalDate(end);
     return `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
   };
 

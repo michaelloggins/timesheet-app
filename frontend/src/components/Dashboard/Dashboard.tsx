@@ -415,6 +415,7 @@ export const Dashboard = () => {
   const [lowHoursDialogOpen, setLowHoursDialogOpen] = useState(false);
 
   // Get timesheet data for current week with auto-save enabled
+  // Use lazyCreate to avoid creating timesheet until user adds an entry
   const {
     weekDates,
     totalHours,
@@ -427,7 +428,7 @@ export const Dashboard = () => {
     isSubmitting,
     canSubmit,
     submitBlockedReason,
-  } = useTimesheet({ projects, autoSave: true });
+  } = useTimesheet({ projects, autoSave: true, lazyCreate: true });
 
   // Get KPIs based on user role
   const employeeStats = useEmployeeStats();

@@ -10,6 +10,9 @@ router.use(authenticate);
 // Get current user's timesheets
 router.get('/my', timesheetController.getUserTimesheets);
 
+// Get timesheet for a specific week (returns null if doesn't exist)
+router.get('/week/:startDate', timesheetController.getTimesheetForWeek);
+
 // Get or create timesheet for a specific week
 router.post('/week', timesheetController.getOrCreateTimesheetForWeek);
 

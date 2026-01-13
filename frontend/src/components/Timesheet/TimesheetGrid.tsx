@@ -997,18 +997,23 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
         );
       })}
 
-      {/* Add Project Button */}
-      {selectedProjects.length < projects.filter((p) => p.isActive).length && (
-        <Button
-          appearance="outline"
-          icon={<Add24Regular />}
-          onClick={handleAddProject}
-          disabled={disabled}
-          className={styles.addButton}
-        >
-          Add Project
-        </Button>
-      )}
+      {/* Add Project Button - always visible */}
+      {(() => {
+        const activeProjectCount = projects.filter((p) => p.isActive).length;
+        const allProjectsAdded = selectedProjects.length >= activeProjectCount;
+        return (
+          <Button
+            appearance="outline"
+            icon={<Add24Regular />}
+            onClick={handleAddProject}
+            disabled={disabled || allProjectsAdded}
+            className={styles.addButton}
+            title={allProjectsAdded ? 'All available projects have been added' : undefined}
+          >
+            {allProjectsAdded ? 'All Projects Added' : 'Add Project'}
+          </Button>
+        );
+      })()}
 
       {/* Desktop Totals Row */}
       <div className={styles.totalRow}>
