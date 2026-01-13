@@ -588,17 +588,24 @@ export const withdrawTimesheet = asyncHandler(async (req: Request, res: Response
   }
 
   const ts = tsResult.recordset[0];
-  if (ts.Status !== 'Submitted') {
-    res.status(400).json({ status: 'error', message: 'Only submitted timesheets can be withdrawn' });
+
+  // Can withdraw from Submitted or Returned status
+  // Cannot withdraw from Draft (already editable) or Approved (need manager to unlock)
+  if (ts.Status === 'Draft') {
+    res.status(400).json({ status: 'error', message: 'Timesheet is already in draft status' });
+    return;
+  }
+  if (ts.Status === 'Approved') {
+    res.status(400).json({ status: 'error', message: 'Approved timesheets cannot be withdrawn. Ask your manager to unlock it.' });
     return;
   }
 
-  // Update status back to Draft
+  // Update status back to Draft and clear submission/return info
   await pool.request()
     .input('timesheetId', timesheetId)
     .query(`
       UPDATE Timesheets
-      SET Status = 'Draft', SubmittedDate = NULL, ModifiedDate = GETUTCDATE()
+      SET Status = 'Draft', SubmittedDate = NULL, ReturnReason = NULL, ModifiedDate = GETUTCDATE()
       WHERE TimesheetID = @timesheetId
     `);
 
