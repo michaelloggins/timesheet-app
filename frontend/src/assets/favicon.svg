@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- MiraVista Y Favicon - Brand Colors -->
+  <defs>
+    <linearGradient id="brandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#85b43b"/>
+      <stop offset="100%" style="stop-color:#286f1f"/>
+    </linearGradient>
+  </defs>
+  <!-- Background circle -->
+  <circle cx="16" cy="16" r="15" fill="url(#brandGradient)"/>
+  <!-- Y Symbol in white -->
+  <path d="M10 8 L16 16 L16 24 L18 24 L18 16 L24 8 L21 8 L17 14 L13 8 Z" fill="white"/>
+</svg>

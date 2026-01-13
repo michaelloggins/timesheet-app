@@ -7,8 +7,11 @@ const router = Router();
 // All routes require authentication
 router.use(authenticate);
 
-// Get user's timesheets
-router.get('/', timesheetController.getUserTimesheets);
+// Get current user's timesheets
+router.get('/my', timesheetController.getUserTimesheets);
+
+// Get or create timesheet for a specific week
+router.post('/week', timesheetController.getOrCreateTimesheetForWeek);
 
 // Get specific timesheet by ID
 router.get('/:id', timesheetController.getTimesheetById);
@@ -24,6 +27,9 @@ router.delete('/:id', timesheetController.deleteTimesheet);
 
 // Submit timesheet for approval
 router.post('/:id/submit', timesheetController.submitTimesheet);
+
+// Withdraw submitted timesheet (return to draft)
+router.post('/:id/withdraw', timesheetController.withdrawTimesheet);
 
 // Time entry operations
 router.post('/:id/entries', timesheetController.addTimeEntry);

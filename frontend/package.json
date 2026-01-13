@@ -41,15 +41,15 @@
     "@typescript-eslint/eslint-plugin": "^6.15.0",
     "@typescript-eslint/parser": "^6.15.0",
     "@vitejs/plugin-react": "^4.2.1",
-    "@vitest/ui": "^1.0.4",
+    "@vitest/ui": "^4.0.17",
     "eslint": "^8.56.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
     "jsdom": "^23.0.1",
     "prettier": "^3.1.1",
     "typescript": "^5.3.3",
-    "vite": "^5.0.8",
-    "vitest": "^1.0.4"
+    "vite": "^7.3.1",
+    "vitest": "^4.0.17"
   },
   "engines": {
     "node": ">=20.0.0",

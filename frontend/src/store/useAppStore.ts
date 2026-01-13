@@ -3,19 +3,16 @@ import { addDays, startOfWeek } from 'date-fns';
 
 interface AppState {
   currentWeekStart: Date;
-  sidebarOpen: boolean;
   notificationCount: number;
   setCurrentWeekStart: (date: Date) => void;
   goToNextWeek: () => void;
   goToPreviousWeek: () => void;
   goToCurrentWeek: () => void;
-  toggleSidebar: () => void;
   setNotificationCount: (count: number) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
   currentWeekStart: startOfWeek(new Date(), { weekStartsOn: 1 }), // Monday
-  sidebarOpen: true,
   notificationCount: 0,
 
   setCurrentWeekStart: (date) => set({ currentWeekStart: date }),
@@ -34,8 +31,6 @@ export const useAppStore = create<AppState>((set) => ({
     set({
       currentWeekStart: startOfWeek(new Date(), { weekStartsOn: 1 }),
     }),
-
-  toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
 
   setNotificationCount: (count) => set({ notificationCount: count }),
 }));

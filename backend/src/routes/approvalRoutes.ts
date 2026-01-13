@@ -7,11 +7,17 @@ const router = Router();
 // All routes require authentication and manager role
 router.use(authenticate, requireManager);
 
-// Get pending approvals
+// Get approvals (supports status filter via query param: ?status=Submitted,Approved,Returned)
+router.get('/', approvalController.getPendingApprovals);
+
+// Get pending approvals (convenience endpoint)
 router.get('/pending', approvalController.getPendingApprovals);
 
 // Get approval history
 router.get('/history', approvalController.getApprovalHistory);
+
+// Get timesheet entries for detail view
+router.get('/:timesheetId/entries', approvalController.getTimesheetEntries);
 
 // Approve timesheet
 router.post('/:timesheetId/approve', approvalController.approveTimesheet);

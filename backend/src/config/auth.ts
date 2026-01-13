@@ -9,7 +9,8 @@ export const azureAdConfig: BearerStrategyOptions = {
   clientID: process.env.CLIENT_ID || '',
   audience: `api://${process.env.CLIENT_ID}` || '',
   validateIssuer: true,
-  issuer: `https://login.microsoftonline.com/${process.env.TENANT_ID}/v2.0`,
+  // Use v1 issuer format (sts.windows.net) - matches token issuer
+  issuer: `https://sts.windows.net/${process.env.TENANT_ID}/`,
   passReqToCallback: false,
   loggingLevel: process.env.NODE_ENV === 'development' ? 'info' : 'error',
   scope: ['access_as_user'],

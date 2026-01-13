@@ -19,4 +19,16 @@ router.get('/employee-stats', dashboardController.getEmployeeStats);
 // Manager dashboard stats
 router.get('/manager-stats', dashboardController.getManagerStats);
 
+// Department leaderboard
+router.get('/leaderboard', dashboardController.getLeaderboard);
+
+// Company-wide KPIs for scoreboard
+router.get('/company-kpis', dashboardController.getCompanyStats);
+
+// Department leaderboard (ranked by compliance)
+router.get('/department-leaderboard', dashboardController.getDepartmentLeaderboardEndpoint);
+
+// Company-wide employee leaderboard (top performers)
+router.get('/company-leaderboard', dashboardController.getCompanyLeaderboardEndpoint);
+
 export default router;

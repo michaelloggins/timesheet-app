@@ -19,38 +19,44 @@ export interface SubmitTimesheetDto {
   timesheetId: number;
 }
 
+interface ApiResponse<T> {
+  status: string;
+  data: T;
+  message?: string;
+}
+
 /**
  * Get current user's timesheets
  */
 export const getMyTimesheets = async (): Promise<Timesheet[]> => {
-  const response = await apiClient.get<Timesheet[]>('/timesheets/my');
-  return response.data;
+  const response = await apiClient.get<ApiResponse<Timesheet[]>>('/timesheets/my');
+  return response.data.data || [];
 };
 
 /**
  * Get a specific timesheet by ID
  */
 export const getTimesheet = async (timesheetId: number): Promise<Timesheet> => {
-  const response = await apiClient.get<Timesheet>(`/timesheets/${timesheetId}`);
-  return response.data;
+  const response = await apiClient.get<ApiResponse<Timesheet>>(`/timesheets/${timesheetId}`);
+  return response.data.data;
 };
 
 /**
  * Get or create timesheet for a specific week
  */
 export const getOrCreateTimesheetForWeek = async (weekStartDate: string): Promise<Timesheet> => {
-  const response = await apiClient.post<Timesheet>('/timesheets/week', {
+  const response = await apiClient.post<ApiResponse<Timesheet>>('/timesheets/week', {
     weekStartDate,
   });
-  return response.data;
+  return response.data.data;
 };
 
 /**
  * Create a new timesheet
  */
 export const createTimesheet = async (data: CreateTimesheetDto): Promise<Timesheet> => {
-  const response = await apiClient.post<Timesheet>('/timesheets', data);
-  return response.data;
+  const response = await apiClient.post<ApiResponse<Timesheet>>('/timesheets', data);
+  return response.data.data;
 };
 
 /**
@@ -60,18 +66,26 @@ export const updateTimesheet = async (
   timesheetId: number,
   entries: TimeEntry[]
 ): Promise<Timesheet> => {
-  const response = await apiClient.put<Timesheet>(`/timesheets/${timesheetId}`, {
+  const response = await apiClient.put<ApiResponse<Timesheet>>(`/timesheets/${timesheetId}`, {
     entries,
   });
-  return response.data;
+  return response.data.data;
 };
 
 /**
  * Submit timesheet for approval
  */
 export const submitTimesheet = async (timesheetId: number): Promise<Timesheet> => {
-  const response = await apiClient.post<Timesheet>(`/timesheets/${timesheetId}/submit`);
-  return response.data;
+  const response = await apiClient.post<ApiResponse<Timesheet>>(`/timesheets/${timesheetId}/submit`);
+  return response.data.data;
+};
+
+/**
+ * Withdraw a submitted timesheet (return to draft)
+ */
+export const withdrawTimesheet = async (timesheetId: number): Promise<Timesheet> => {
+  const response = await apiClient.post<ApiResponse<Timesheet>>(`/timesheets/${timesheetId}/withdraw`);
+  return response.data.data;
 };
 
 /**
@@ -88,8 +102,8 @@ export const addTimeEntry = async (
   timesheetId: number,
   entry: Omit<TimeEntry, 'timeEntryId' | 'timesheetId'>
 ): Promise<TimeEntry> => {
-  const response = await apiClient.post<TimeEntry>(`/timesheets/${timesheetId}/entries`, entry);
-  return response.data;
+  const response = await apiClient.post<ApiResponse<TimeEntry>>(`/timesheets/${timesheetId}/entries`, entry);
+  return response.data.data;
 };
 
 /**
@@ -99,12 +113,11 @@ export const updateTimeEntry = async (
   timesheetId: number,
   entryId: number,
   entry: Partial<TimeEntry>
-): Promise<TimeEntry> => {
-  const response = await apiClient.put<TimeEntry>(
+): Promise<void> => {
+  await apiClient.put(
     `/timesheets/${timesheetId}/entries/${entryId}`,
     entry
   );
-  return response.data;
 };
 
 /**
@@ -126,22 +139,25 @@ export const calculateTotalHours = (entries: TimeEntry[]): number => {
  */
 export const calculateHoursByDate = (entries: TimeEntry[]): Record<string, number> => {
   return entries.reduce((acc, entry) => {
-    const date = entry.workDate;
+    // Normalize workDate to YYYY-MM-DD format
+    const date = typeof entry.workDate === 'string'
+      ? entry.workDate.split('T')[0]
+      : formatDate(new Date(entry.workDate));
     acc[date] = (acc[date] || 0) + entry.hoursWorked;
     return acc;
   }, {} as Record<string, number>);
 };
 
 /**
- * Get week dates (Monday - Sunday)
+ * Get week dates (Sunday - Saturday)
  */
 export const getWeekDates = (startDate: Date): Date[] => {
   const dates: Date[] = [];
   const start = new Date(startDate);
 
-  // Ensure start is Monday
+  // Ensure start is Sunday
   const day = start.getDay();
-  const diff = day === 0 ? -6 : 1 - day; // Sunday is 0, we want Monday as start
+  const diff = -day; // Sunday is 0, so subtract day to get to Sunday
   start.setDate(start.getDate() + diff);
 
   for (let i = 0; i < 7; i++) {
@@ -161,16 +177,16 @@ export const formatDate = (date: Date): string => {
 };
 
 /**
- * Get current week start (Monday)
+ * Get current week start (Sunday)
  */
 export const getCurrentWeekStart = (): Date => {
   const today = new Date();
   const day = today.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  const monday = new Date(today);
-  monday.setDate(today.getDate() + diff);
-  monday.setHours(0, 0, 0, 0);
-  return monday;
+  const diff = -day; // Sunday is 0, so subtract day to get to Sunday
+  const sunday = new Date(today);
+  sunday.setDate(today.getDate() + diff);
+  sunday.setHours(0, 0, 0, 0);
+  return sunday;
 };
 
 /**

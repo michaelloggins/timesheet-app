@@ -48,7 +48,12 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response: AxiosResponse) => response,
   async (error: AxiosError) => {
-    if (error.response?.status === 401) {
+    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+
+    // Only retry once to prevent infinite loops
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+
       // Token expired or invalid - try to refresh
       try {
         const accounts = msalInstance.getAllAccounts();
@@ -57,9 +62,10 @@ apiClient.interceptors.response.use(
           await msalInstance.acquireTokenSilent({
             scopes: [`api://${clientId}/access_as_user`],
             account: accounts[0],
+            forceRefresh: true,
           });
           // Retry the original request
-          return apiClient.request(error.config!);
+          return apiClient.request(originalRequest);
         }
       } catch (refreshError) {
         // Don't automatically logout - let the user stay signed in

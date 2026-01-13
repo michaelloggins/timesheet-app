@@ -46,3 +46,8 @@ export const tokenRequest = {
   scopes: ['User.Read'],
   forceRefresh: false,
 };
+
+// Scopes for Microsoft Graph API (user photo, etc.)
+export const graphScopes = {
+  scopes: ['User.Read'],
+};

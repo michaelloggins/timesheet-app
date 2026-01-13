@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 45" width="200" height="45">
+  <!-- MiraVista Text -->
+  <text x="0" y="24" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="400">
+    <tspan fill="#404041">Mira</tspan><tspan fill="#7cb82f">V</tspan><tspan fill="#404041">ista</tspan>
+  </text>
+
+  <!-- DIAGNOSTICS Text -->
+  <text x="1" y="38" font-family="Arial, Helvetica, sans-serif" font-size="9" font-weight="400" fill="#808080" letter-spacing="2.2">DIAGNOSTICS</text>
+
+  <!-- Antibody Y Icon -->
+  <g transform="translate(148, 4)" stroke="#7cb82f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <!-- Left arm with bulb -->
+    <ellipse cx="5" cy="4" rx="3.5" ry="4"/>
+    <line x1="5" y1="8" x2="5" y2="14"/>
+    <line x1="5" y1="14" x2="14" y2="22"/>
+
+    <!-- Right arm with bulb -->
+    <ellipse cx="27" cy="4" rx="3.5" ry="4"/>
+    <line x1="27" y1="8" x2="27" y2="14"/>
+    <line x1="27" y1="14" x2="18" y2="22"/>
+
+    <!-- Center stem -->
+    <line x1="16" y1="22" x2="16" y2="38"/>
+  </g>
+</svg>

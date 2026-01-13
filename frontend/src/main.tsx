@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { FluentProvider, webLightTheme } from '@fluentui/react-components';
+import { FluentProvider } from '@fluentui/react-components';
+import { miraVistaLightTheme } from './config/theme';
 import { BrowserRouter } from 'react-router-dom';
 import { MsalProvider } from '@azure/msal-react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -26,7 +27,7 @@ msalInstance.initialize().then(() => {
     <React.StrictMode>
       <MsalProvider instance={msalInstance}>
         <QueryClientProvider client={queryClient}>
-          <FluentProvider theme={webLightTheme}>
+          <FluentProvider theme={miraVistaLightTheme} style={{ backgroundColor: 'transparent' }}>
             <BrowserRouter>
               <App />
             </BrowserRouter>

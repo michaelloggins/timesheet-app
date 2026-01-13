@@ -76,13 +76,14 @@ export const useUpdateProject = () => {
 };
 
 /**
- * Delete project
+ * Deactivate project (soft delete)
  */
-export const useDeleteProject = () => {
+export const useDeactivateProject = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: number) => projectService.deleteProject(id),
+    mutationFn: ({ id, reason }: { id: number; reason?: string }) =>
+      projectService.deactivateProject(id, reason),
     onSuccess: () => {
       // Invalidate and refetch projects
       queryClient.invalidateQueries({ queryKey: [PROJECTS_QUERY_KEY] });

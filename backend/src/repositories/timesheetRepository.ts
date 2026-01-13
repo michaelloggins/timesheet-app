@@ -62,6 +62,14 @@ export const updateTimesheet = async (
 
 export const deleteTimesheet = async (timesheetId: number): Promise<void> => {
   const pool = getPool();
+
+  // Delete related records first (TimesheetHistory)
+  await pool
+    .request()
+    .input('timesheetId', timesheetId)
+    .query(`DELETE FROM TimesheetHistory WHERE TimesheetID = @timesheetId`);
+
+  // Now delete the timesheet (TimeEntries will cascade delete)
   await pool
     .request()
     .input('timesheetId', timesheetId)

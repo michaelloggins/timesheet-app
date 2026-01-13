@@ -40,7 +40,7 @@ const useStyles = makeStyles({
 interface ProjectFormData {
   projectNumber: string;
   projectName: string;
-  departmentId: number;
+  departmentId: number | null; // null = All Departments (universal)
   projectType: 'Work' | 'PTO' | 'Holiday';
   grantIdentifier: string;
   isActive: boolean;
@@ -74,7 +74,7 @@ export const ProjectFormModal = ({
     defaultValues: {
       projectNumber: '',
       projectName: '',
-      departmentId: departments[0]?.departmentId || 1,
+      departmentId: null, // Default to All Departments
       projectType: 'Work',
       grantIdentifier: '',
       isActive: true,
@@ -87,7 +87,7 @@ export const ProjectFormModal = ({
       reset({
         projectNumber: project.projectNumber,
         projectName: project.projectName,
-        departmentId: project.departmentId,
+        departmentId: project.departmentId, // Can be null for universal projects
         projectType: project.projectType,
         grantIdentifier: project.grantIdentifier || '',
         isActive: project.isActive,
@@ -96,7 +96,7 @@ export const ProjectFormModal = ({
       reset({
         projectNumber: '',
         projectName: '',
-        departmentId: departments[0]?.departmentId || 1,
+        departmentId: null, // Default to All Departments
         projectType: 'Work',
         grantIdentifier: '',
         isActive: true,
@@ -108,7 +108,7 @@ export const ProjectFormModal = ({
     const submitData: CreateProjectDto = {
       projectNumber: data.projectNumber,
       projectName: data.projectName,
-      departmentId: Number(data.departmentId),
+      departmentId: data.departmentId, // null = All Departments
       projectType: data.projectType,
       grantIdentifier: data.grantIdentifier || undefined,
       isActive: data.isActive,
@@ -163,17 +163,23 @@ export const ProjectFormModal = ({
                 />
               </Field>
 
-              <Field label="Department" required className={styles.field}>
+              <Field label="Department" className={styles.field}>
                 <Controller
                   name="departmentId"
                   control={control}
                   render={({ field }) => (
                     <Dropdown
                       {...field}
-                      value={departments.find(d => d.departmentId === field.value)?.departmentName}
-                      onOptionSelect={(_, data) => field.onChange(Number(data.optionValue))}
+                      value={field.value === null ? 'All Departments' : departments.find(d => d.departmentId === field.value)?.departmentName}
+                      onOptionSelect={(_, data) => {
+                        const value = data.optionValue;
+                        field.onChange(value === 'all' ? null : Number(value));
+                      }}
                       disabled={isLoading}
                     >
+                      <Option key="all" value="all">
+                        All Departments (Universal)
+                      </Option>
                       {departments.map((dept) => (
                         <Option key={dept.departmentId} value={String(dept.departmentId)}>
                           {dept.departmentName}

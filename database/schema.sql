@@ -22,11 +22,15 @@ CREATE TABLE Departments (
 CREATE TABLE Users (
     UserID INT IDENTITY(1,1) PRIMARY KEY,
     EntraIDObjectID NVARCHAR(100) NOT NULL UNIQUE,
+    EmployeeID NVARCHAR(50) NULL,
     Email NVARCHAR(255) NOT NULL,
     Name NVARCHAR(200) NOT NULL,
     DepartmentID INT NOT NULL,
     Role VARCHAR(50) NOT NULL DEFAULT 'Employee',
+    ManagerEntraID NVARCHAR(100) NULL,
     IsActive BIT NOT NULL DEFAULT 1,
+    DeactivatedDate DATETIME2 NULL,
+    DeactivationReason NVARCHAR(500) NULL,
     CreatedDate DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
     LastLoginDate DATETIME2 NULL,
     CONSTRAINT FK_Users_Department FOREIGN KEY (DepartmentID)

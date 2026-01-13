@@ -12,6 +12,7 @@ router.get('/users', adminController.getUsers);
 router.post('/users', adminController.createUser);
 router.put('/users/:id', adminController.updateUser);
 router.delete('/users/:id', adminController.deactivateUser);
+router.post('/users/sync', adminController.syncUsersFromEntra);
 
 // Department management
 router.get('/departments', adminController.getDepartments);
@@ -28,5 +29,11 @@ router.put('/config', adminController.updateSystemConfig);
 
 // Audit logs
 router.get('/audit-logs', adminController.getAuditLogs);
+
+// Holiday management
+router.get('/holidays', adminController.getHolidays);
+router.post('/holidays', adminController.createHoliday);
+router.put('/holidays/:id', adminController.updateHoliday);
+router.delete('/holidays/:id', adminController.deleteHoliday);
 
 export default router;

@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { makeStyles } from '@fluentui/react-components';
+import { makeStyles, tokens } from '@fluentui/react-components';
 import {
   Home24Regular,
   ClipboardTask24Regular,
@@ -15,6 +15,11 @@ const useStyles = makeStyles({
     backgroundColor: 'white',
     borderRight: '1px solid var(--color-gray-200)',
     padding: '1rem',
+    height: '100%',
+    '@media (max-width: 768px)': {
+      width: '280px',
+      boxShadow: tokens.shadow16,
+    },
   },
   nav: {
     display: 'flex',
@@ -41,33 +46,44 @@ const useStyles = makeStyles({
   },
 });
 
-export const Sidebar = () => {
+interface SidebarProps {
+  onNavigate?: () => void;
+}
+
+export const Sidebar = ({ onNavigate }: SidebarProps) => {
   const styles = useStyles();
+
+  const handleNavClick = () => {
+    // Close sidebar on mobile when navigating
+    if (onNavigate) {
+      onNavigate();
+    }
+  };
 
   return (
     <aside className={styles.sidebar}>
       <nav className={styles.nav}>
-        <NavLink to="/" className={styles.navLink}>
+        <NavLink to="/" className={styles.navLink} onClick={handleNavClick}>
           <Home24Regular />
           Dashboard
         </NavLink>
-        <NavLink to="/timesheets" className={styles.navLink}>
+        <NavLink to="/timesheets" className={styles.navLink} onClick={handleNavClick}>
           <ClipboardTask24Regular />
           Timesheets
         </NavLink>
-        <NavLink to="/approvals" className={styles.navLink}>
+        <NavLink to="/approvals" className={styles.navLink} onClick={handleNavClick}>
           <CheckboxChecked24Regular />
           Approvals
         </NavLink>
-        <NavLink to="/scoreboard" className={styles.navLink}>
+        <NavLink to="/scoreboard" className={styles.navLink} onClick={handleNavClick}>
           <Trophy24Regular />
           Scoreboard
         </NavLink>
-        <NavLink to="/reports" className={styles.navLink}>
+        <NavLink to="/reports" className={styles.navLink} onClick={handleNavClick}>
           <DocumentTable24Regular />
           Reports
         </NavLink>
-        <NavLink to="/admin" className={styles.navLink}>
+        <NavLink to="/admin" className={styles.navLink} onClick={handleNavClick}>
           <Settings24Regular />
           Admin
         </NavLink>

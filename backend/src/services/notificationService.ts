@@ -141,6 +141,17 @@ class NotificationService {
 
     await this.sendEmail(managerEmail, subject, html);
   }
+
+  /**
+   * Send sync conflict notification
+   */
+  async sendSyncConflict(
+    recipientEmail: string,
+    subject: string,
+    htmlContent: string
+  ): Promise<void> {
+    await this.sendEmail(recipientEmail, subject, htmlContent);
+  }
 }
 
 export const notificationService = new NotificationService();

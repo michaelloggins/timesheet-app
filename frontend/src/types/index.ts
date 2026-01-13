@@ -25,7 +25,8 @@ export interface Project {
   projectId: number;
   projectNumber: string;
   projectName: string;
-  departmentId: number;
+  departmentId: number | null; // NULL = universal/all departments
+  departmentName?: string | null;
   projectType: 'Work' | 'PTO' | 'Holiday';
   grantIdentifier?: string;
   isActive: boolean;

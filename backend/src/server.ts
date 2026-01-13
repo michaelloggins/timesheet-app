@@ -14,6 +14,7 @@ import projectRoutes from './routes/projectRoutes';
 import reportRoutes from './routes/reportRoutes';
 import dashboardRoutes from './routes/dashboardRoutes';
 import adminRoutes from './routes/adminRoutes';
+import importRoutes from './routes/importRoutes';
 import { logger } from './utils/logger';
 import { connectDatabase } from './config/database';
 
@@ -69,6 +70,7 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/admin/import', importRoutes);
 
 // 404 handler
 app.use(notFoundHandler);
