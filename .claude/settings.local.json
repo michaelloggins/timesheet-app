@@ -51,7 +51,8 @@
       "Bash(npx ts-node -e \"\nconst sql = require\\(''mssql''\\);\n\nconst config = {\n  server: ''sql-miravista-prod.database.windows.net'',\n  database: ''TimesheetDB'',\n  user: ''sqladmin'',\n  password: ''MiraVista2026!Secure#DB'',\n  options: {\n    encrypt: true,\n    trustServerCertificate: false\n  }\n};\n\nasync function runMigration\\(\\) {\n  try {\n    const pool = await sql.connect\\(config\\);\n    \n    // Add AvatarHash column\n    await pool.request\\(\\).query\\(''ALTER TABLE Users ADD AvatarHash NVARCHAR\\(64\\) NULL''\\);\n    console.log\\(''Added AvatarHash column''\\);\n    \n    // Add AvatarUpdatedDate column  \n    await pool.request\\(\\).query\\(''ALTER TABLE Users ADD AvatarUpdatedDate DATETIME2 NULL''\\);\n    console.log\\(''Added AvatarUpdatedDate column''\\);\n    \n    // Create index\n    await pool.request\\(\\).query\\(''CREATE INDEX IX_Users_AvatarHash ON Users\\(AvatarHash\\) WHERE AvatarHash IS NOT NULL''\\);\n    console.log\\(''Created index IX_Users_AvatarHash''\\);\n    \n    console.log\\(''Migration completed successfully!''\\);\n    await pool.close\\(\\);\n  } catch \\(err\\) {\n    console.error\\(''Migration error:'', err.message\\);\n    process.exit\\(1\\);\n  }\n}\n\nrunMigration\\(\\);\n\")",
       "Bash(node:*)",
       "Bash(npx swa:*)",
-      "Bash(npx @azure/static-web-apps-cli deploy frontend/dist --env production)"
+      "Bash(npx @azure/static-web-apps-cli deploy frontend/dist --env production)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []

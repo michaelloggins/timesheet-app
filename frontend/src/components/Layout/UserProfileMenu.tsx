@@ -146,14 +146,16 @@ export const UserProfileMenu = () => {
       try {
         const response = await apiClient.get(`/auth/avatar`, {
           responseType: 'blob',
+          validateStatus: (status) => status === 200 || status === 404, // Don't throw on 404
         });
         if (response.status === 200) {
           const blob = response.data;
           setPhotoUrl(URL.createObjectURL(blob));
           return;
         }
+        // 404 means no cached avatar, continue to sync
       } catch {
-        // Avatar not cached yet, continue to sync
+        // Network error or other issue, continue to try sync
       }
 
       // If no cached avatar and we haven't tried syncing yet, sync from Graph
@@ -175,6 +177,7 @@ export const UserProfileMenu = () => {
           // Now try to load the cached avatar again
           const avatarResponse = await apiClient.get(`/auth/avatar`, {
             responseType: 'blob',
+            validateStatus: (status) => status === 200 || status === 404,
           });
           if (avatarResponse.status === 200) {
             const blob = avatarResponse.data;
