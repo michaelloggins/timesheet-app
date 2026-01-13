@@ -46,18 +46,44 @@ export const createTimesheet = async (timesheet: Partial<Timesheet>): Promise<nu
 
 export const updateTimesheet = async (
   timesheetId: number,
-  _updates: Partial<Timesheet>
+  updates: Partial<Timesheet>
 ): Promise<void> => {
-  // TODO: Implement dynamic update based on provided fields
   const pool = getPool();
-  await pool
-    .request()
-    .input('timesheetId', timesheetId)
-    .query(`
-      UPDATE Timesheets
-      SET ModifiedDate = GETUTCDATE()
-      WHERE TimesheetID = @timesheetId
-    `);
+  const request = pool.request().input('timesheetId', timesheetId);
+
+  // Build dynamic SET clause based on provided fields
+  const setClauses: string[] = ['ModifiedDate = GETUTCDATE()'];
+
+  if (updates.Status !== undefined) {
+    request.input('status', updates.Status);
+    setClauses.push('Status = @status');
+  }
+  if (updates.SubmittedDate !== undefined) {
+    request.input('submittedDate', updates.SubmittedDate);
+    setClauses.push('SubmittedDate = @submittedDate');
+  }
+  if (updates.ApprovedDate !== undefined) {
+    request.input('approvedDate', updates.ApprovedDate);
+    setClauses.push('ApprovedDate = @approvedDate');
+  }
+  if (updates.ApprovedByUserID !== undefined) {
+    request.input('approvedByUserId', updates.ApprovedByUserID);
+    setClauses.push('ApprovedByUserID = @approvedByUserId');
+  }
+  if (updates.ReturnReason !== undefined) {
+    request.input('returnReason', updates.ReturnReason);
+    setClauses.push('ReturnReason = @returnReason');
+  }
+  if (updates.IsLocked !== undefined) {
+    request.input('isLocked', updates.IsLocked);
+    setClauses.push('IsLocked = @isLocked');
+  }
+
+  await request.query(`
+    UPDATE Timesheets
+    SET ${setClauses.join(', ')}
+    WHERE TimesheetID = @timesheetId
+  `);
 };
 
 export const deleteTimesheet = async (timesheetId: number): Promise<void> => {
