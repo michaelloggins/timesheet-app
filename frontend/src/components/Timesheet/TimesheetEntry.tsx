@@ -37,8 +37,9 @@ import {
   Send24Regular,
   CheckmarkCircle24Regular,
   Warning20Regular,
+  List24Regular,
 } from '@fluentui/react-icons';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useTimesheet } from '../../hooks/useTimesheet';
 import { useProjects } from '../../hooks/useProjects';
 import { TimesheetGrid } from './TimesheetGrid';
@@ -166,6 +167,7 @@ const useStyles = makeStyles({
 export const TimesheetEntry = () => {
   const styles = useStyles();
   const location = useLocation();
+  const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { data: projects = [], isLoading: projectsLoading } = useProjects();
 
@@ -341,6 +343,17 @@ export const TimesheetEntry = () => {
       {/* Header with Navigation and Actions */}
       <div className={styles.header}>
         <div className={styles.navigation}>
+          <Button
+            className={styles.navigationButton}
+            appearance="subtle"
+            icon={<List24Regular />}
+            onClick={() => navigate('/timesheets')}
+            title="Back to Timesheets"
+            size="small"
+          >
+            Timesheets
+          </Button>
+          <div style={{ width: '1px', height: '24px', backgroundColor: tokens.colorNeutralStroke2, margin: '0 4px' }} />
           <Button
             className={styles.navigationButton}
             appearance="subtle"
