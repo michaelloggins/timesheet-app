@@ -50,10 +50,12 @@ export const getActiveDelegations = asyncHandler(async (req: Request, res: Respo
  */
 export const createDelegation = asyncHandler(async (req: Request, res: Response) => {
   const user = req.user!;
-  const { delegateId, startDate, endDate, reason } = req.body;
+  // Accept both delegateId and delegateUserId for compatibility
+  const { delegateId, delegateUserId, startDate, endDate, reason } = req.body;
+  const actualDelegateId = delegateId || delegateUserId;
 
   // Validate required fields
-  if (!delegateId) {
+  if (!actualDelegateId) {
     throw new AppError(400, 'Delegate ID is required');
   }
   if (!startDate) {
@@ -78,7 +80,7 @@ export const createDelegation = asyncHandler(async (req: Request, res: Response)
   // The delegator is the current user (they are delegating their own authority)
   const delegation = await delegationService.createDelegation({
     delegatorId: user.userId,
-    delegateId: parseInt(delegateId, 10),
+    delegateId: parseInt(actualDelegateId, 10),
     startDate: parsedStartDate,
     endDate: parsedEndDate,
     reason: reason || undefined,
