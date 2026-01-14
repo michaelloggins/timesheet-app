@@ -222,7 +222,11 @@ const isActiveDelegation = (delegation: Delegation): boolean => {
   return delegation.isActive && start <= now && end >= now;
 };
 
-export const DelegationSettings = () => {
+interface DelegationSettingsProps {
+  embedded?: boolean;
+}
+
+export const DelegationSettings = ({ embedded = false }: DelegationSettingsProps) => {
   const styles = useStyles();
   const navigate = useNavigate();
 
@@ -336,24 +340,28 @@ export const DelegationSettings = () => {
 
   return (
     <div className={styles.container}>
-      {/* Header */}
-      <div className={styles.header}>
-        <div className={styles.headerLeft}>
-          <Button
-            appearance="subtle"
-            icon={<ArrowLeft24Regular />}
-            onClick={() => navigate('/')}
-            className={styles.backButton}
-          />
-          <PersonSwap24Regular style={{ fontSize: '28px' }} />
-          <Title2 className={styles.headerTitle}>Delegation Settings</Title2>
-        </div>
-      </div>
+      {/* Header - only show when not embedded */}
+      {!embedded && (
+        <>
+          <div className={styles.header}>
+            <div className={styles.headerLeft}>
+              <Button
+                appearance="subtle"
+                icon={<ArrowLeft24Regular />}
+                onClick={() => navigate('/')}
+                className={styles.backButton}
+              />
+              <PersonSwap24Regular style={{ fontSize: '28px' }} />
+              <Title2 className={styles.headerTitle}>Delegation Settings</Title2>
+            </div>
+          </div>
 
-      <Text>
-        Delegations allow you to authorize another user to approve timesheets on your behalf during
-        your absence. The delegate will see pending approvals that would normally come to you.
-      </Text>
+          <Text>
+            Delegations allow you to authorize another user to approve timesheets on your behalf during
+            your absence. The delegate will see pending approvals that would normally come to you.
+          </Text>
+        </>
+      )}
 
       {/* Delegations Given Section */}
       <div className={styles.section}>

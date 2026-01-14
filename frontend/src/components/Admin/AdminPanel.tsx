@@ -35,6 +35,7 @@ import {
   PopoverTrigger,
   PopoverSurface,
   Link,
+  Text,
 } from '@fluentui/react-components';
 import {
   AddRegular,
@@ -66,6 +67,7 @@ import { ProjectFormModal } from './ProjectFormModal';
 import { DepartmentFormModal } from './DepartmentFormModal';
 import { HolidayFormModal } from './HolidayFormModal';
 import { UserDetailsModal } from './UserDetailsModal';
+import { DelegationSettings } from '../Settings/DelegationSettings';
 import { Project } from '../../types';
 import { CreateProjectDto } from '../../services/projectService';
 import { Department, CreateDepartmentDto } from '../../services/departmentService';
@@ -852,12 +854,16 @@ export const AdminPanel = () => {
         )}
 
         {selectedTab === 'settings' && (
-          <MessageBar intent="info">
-            <MessageBarBody>
-              <MessageBarTitle>Coming Soon</MessageBarTitle>
-              System settings will be available in a future update.
-            </MessageBarBody>
-          </MessageBar>
+          <>
+            <div className={styles.header}>
+              <Title3>Delegation Settings</Title3>
+            </div>
+            <Text style={{ marginBottom: tokens.spacingVerticalM, display: 'block' }}>
+              Delegations allow you to authorize another user to approve timesheets on your behalf during
+              your absence. The delegate will see pending approvals that would normally come to you.
+            </Text>
+            <DelegationSettings embedded />
+          </>
         )}
       </div>
 

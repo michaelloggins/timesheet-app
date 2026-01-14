@@ -99,6 +99,27 @@ export const useApprovals = (options: UseApprovalsOptions = {}) => {
 /**
  * Hook to fetch entries for a specific timesheet
  */
+/**
+ * Lightweight hook just for pending approval count (for sidebar badge)
+ */
+export const usePendingApprovalCount = () => {
+  const { data: approvals = [], isLoading } = useQuery({
+    queryKey: ['approvals', 'Submitted'],
+    queryFn: () => getApprovals(['Submitted']),
+    staleTime: 1000 * 60 * 2, // 2 minutes
+    refetchOnWindowFocus: true,
+    refetchInterval: 1000 * 60 * 5, // Refresh every 5 minutes in background
+  });
+
+  return {
+    count: approvals.length,
+    isLoading,
+  };
+};
+
+/**
+ * Hook to fetch entries for a specific timesheet
+ */
 export const useTimesheetEntries = (timesheetId: number | null) => {
   const { data: entries = [], isLoading, error } = useQuery({
     queryKey: ['approvalEntries', timesheetId],

@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { makeStyles, tokens } from '@fluentui/react-components';
+import { makeStyles, tokens, CounterBadge } from '@fluentui/react-components';
 import {
   Home24Regular,
   ClipboardTask24Regular,
@@ -7,8 +7,8 @@ import {
   Trophy24Regular,
   DocumentTable24Regular,
   Settings24Regular,
-  PersonSwap24Regular,
 } from '@fluentui/react-icons';
+import { usePendingApprovalCount } from '../../hooks/useApprovals';
 
 const useStyles = makeStyles({
   sidebar: {
@@ -45,6 +45,15 @@ const useStyles = makeStyles({
       fontWeight: '600',
     },
   },
+  navLinkContent: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.75rem',
+    flex: 1,
+  },
+  badge: {
+    marginLeft: 'auto',
+  },
 });
 
 interface SidebarProps {
@@ -53,6 +62,7 @@ interface SidebarProps {
 
 export const Sidebar = ({ onNavigate }: SidebarProps) => {
   const styles = useStyles();
+  const { count: pendingCount } = usePendingApprovalCount();
 
   const handleNavClick = () => {
     // Close sidebar on mobile when navigating
@@ -73,8 +83,18 @@ export const Sidebar = ({ onNavigate }: SidebarProps) => {
           Timesheets
         </NavLink>
         <NavLink to="/approvals" className={styles.navLink} onClick={handleNavClick}>
-          <CheckboxChecked24Regular />
-          Approvals
+          <span className={styles.navLinkContent}>
+            <CheckboxChecked24Regular />
+            Approvals
+          </span>
+          {pendingCount > 0 && (
+            <CounterBadge
+              count={pendingCount}
+              color="danger"
+              size="small"
+              className={styles.badge}
+            />
+          )}
         </NavLink>
         <NavLink to="/scoreboard" className={styles.navLink} onClick={handleNavClick}>
           <Trophy24Regular />
@@ -83,10 +103,6 @@ export const Sidebar = ({ onNavigate }: SidebarProps) => {
         <NavLink to="/reports" className={styles.navLink} onClick={handleNavClick}>
           <DocumentTable24Regular />
           Reports
-        </NavLink>
-        <NavLink to="/settings/delegations" className={styles.navLink} onClick={handleNavClick}>
-          <PersonSwap24Regular />
-          Delegations
         </NavLink>
         <NavLink to="/admin" className={styles.navLink} onClick={handleNavClick}>
           <Settings24Regular />
