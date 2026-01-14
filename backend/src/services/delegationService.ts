@@ -368,6 +368,29 @@ export const getDelegationById = async (delegationId: number): Promise<Delegatio
 };
 
 /**
+ * Get users eligible to be delegates (Manager, Leadership, TimesheetAdmin roles)
+ * Excludes the current user since you can't delegate to yourself
+ */
+export const getEligibleDelegates = async (
+  currentUserId: number
+): Promise<{ userId: number; name: string; email: string }[]> => {
+  const pool = getPool();
+
+  const result = await pool.request()
+    .input('currentUserId', currentUserId)
+    .query(`
+      SELECT UserID as userId, Name as name, Email as email
+      FROM Users
+      WHERE IsActive = 1
+        AND UserID != @currentUserId
+        AND Role IN ('Manager', 'Leadership', 'TimesheetAdmin')
+      ORDER BY Name
+    `);
+
+  return result.recordset;
+};
+
+/**
  * Check if a user can approve on behalf of another user via delegation
  */
 export const canApproveOnBehalfOf = async (

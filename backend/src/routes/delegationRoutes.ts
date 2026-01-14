@@ -19,6 +19,9 @@ router.get('/', delegationController.listDelegations);
 // Get currently active delegations (where current user is delegate)
 router.get('/active', delegationController.getActiveDelegations);
 
+// Get eligible users who can be delegates (for dropdown)
+router.get('/eligible-delegates', delegationController.getEligibleDelegates);
+
 // Get a specific delegation by ID
 router.get('/:id', delegationController.getDelegation);
 

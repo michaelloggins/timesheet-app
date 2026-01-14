@@ -151,6 +151,21 @@ export const getDelegation = asyncHandler(async (req: Request, res: Response) =>
 });
 
 /**
+ * GET /api/delegations/eligible-delegates
+ * Get list of users eligible to be delegates (Manager, Leadership, TimesheetAdmin roles)
+ */
+export const getEligibleDelegates = asyncHandler(async (req: Request, res: Response) => {
+  const user = req.user!;
+
+  const eligibleDelegates = await delegationService.getEligibleDelegates(user.userId);
+
+  res.status(200).json({
+    status: 'success',
+    data: eligibleDelegates,
+  });
+});
+
+/**
  * Helper function to format delegation response
  */
 function formatDelegationResponse(delegation: delegationService.DelegationWithNames) {

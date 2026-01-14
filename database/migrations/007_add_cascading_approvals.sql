@@ -31,6 +31,23 @@ BEGIN
 END
 GO
 
+-- Add RevokedDate and RevokedByUserID columns if they don't exist
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('ApprovalDelegation') AND name = 'RevokedDate')
+BEGIN
+    ALTER TABLE ApprovalDelegation ADD RevokedDate DATETIME2 NULL;
+    PRINT 'Added RevokedDate column to ApprovalDelegation table';
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('ApprovalDelegation') AND name = 'RevokedByUserID')
+BEGIN
+    ALTER TABLE ApprovalDelegation ADD RevokedByUserID INT NULL;
+    ALTER TABLE ApprovalDelegation ADD CONSTRAINT FK_ApprovalDelegation_RevokedBy
+        FOREIGN KEY (RevokedByUserID) REFERENCES Users(UserID);
+    PRINT 'Added RevokedByUserID column to ApprovalDelegation table';
+END
+GO
+
 -- Create indexes for ApprovalDelegation lookups
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_ApprovalDelegation_Delegator')
 BEGIN
@@ -127,6 +144,31 @@ ALTER TABLE TimesheetHistory
     ADD CONSTRAINT CHK_TimesheetHistory_Action
     CHECK (Action IN ('Created', 'Submitted', 'Approved', 'Returned', 'Unlocked', 'Modified', 'Withdrawn', 'Delegated'));
 PRINT 'Recreated CHK_TimesheetHistory_Action constraint with additional actions';
+GO
+
+-- =============================================
+-- 6. CREATE DelegationAuditLog TABLE
+-- Audit trail for delegation creation and revocation
+-- =============================================
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'DelegationAuditLog')
+BEGIN
+    CREATE TABLE DelegationAuditLog (
+        LogID INT IDENTITY(1,1) PRIMARY KEY,
+        DelegationID INT NOT NULL,
+        Action VARCHAR(20) NOT NULL,
+        ActionByUserID INT NOT NULL,
+        DelegatorUserID INT NOT NULL,
+        DelegateUserID INT NOT NULL,
+        StartDate DATE NOT NULL,
+        EndDate DATE NOT NULL,
+        Reason NVARCHAR(500) NULL,
+        ActionDate DATETIME2 DEFAULT GETUTCDATE(),
+        CONSTRAINT FK_DelegationAuditLog_ActionBy FOREIGN KEY (ActionByUserID)
+            REFERENCES Users(UserID),
+        CONSTRAINT CHK_DelegationAuditLog_Action CHECK (Action IN ('CREATED', 'REVOKED'))
+    );
+    PRINT 'Created DelegationAuditLog table';
+END
 GO
 
 PRINT 'Migration 007_add_cascading_approvals completed successfully!';
