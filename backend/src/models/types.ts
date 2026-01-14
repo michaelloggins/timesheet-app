@@ -10,6 +10,7 @@ export interface User {
   Name: string;
   DepartmentID: number;
   Role: 'Employee' | 'Manager' | 'TimesheetAdmin' | 'Leadership';
+  ManagerEntraID?: string | null;
   IsActive: boolean;
   CreatedDate: Date;
   LastLoginDate?: Date;
@@ -69,12 +70,27 @@ export interface TimeEntry {
 export interface TimesheetHistory {
   HistoryID: number;
   TimesheetID: number;
-  Action: 'Created' | 'Submitted' | 'Approved' | 'Returned' | 'Unlocked' | 'Modified';
+  Action: 'Created' | 'Submitted' | 'Approved' | 'Returned' | 'Unlocked' | 'Modified' | 'Withdrawn' | 'Delegated';
   ActionByUserID: number;
   ActionDate: Date;
   Notes?: string;
   PreviousStatus?: string;
   NewStatus?: string;
+  ApprovalType?: 'Primary' | 'Delegate' | 'Escalated' | 'Admin';
+  OnBehalfOfUserID?: number;
+}
+
+// Approval Delegation Types
+export interface ApprovalDelegation {
+  DelegationID: number;
+  DelegatorUserID: number;
+  DelegateUserID: number;
+  StartDate: Date;
+  EndDate: Date;
+  Reason?: string;
+  IsActive: boolean;
+  CreatedDate: Date;
+  CreatedByUserID: number;
 }
 
 // API Response Types

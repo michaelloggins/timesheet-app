@@ -123,3 +123,36 @@ export interface ApiError {
   message: string;
   statusCode?: number;
 }
+
+// Approval Type for Cascading Approvals
+export type ApprovalType = 'Primary' | 'Delegate' | 'Escalated';
+
+// Delegation Types for Cascading Approvals
+export interface Delegation {
+  delegationId: number;
+  delegatorUserId: number;
+  delegatorName: string;
+  delegatorEmail: string;
+  delegateUserId: number;
+  delegateName: string;
+  delegateEmail: string;
+  startDate: string;
+  endDate: string;
+  reason?: string;
+  isActive: boolean;
+  createdDate: string;
+  revokedDate?: string;
+  revokedByUserId?: number;
+}
+
+export interface CreateDelegationRequest {
+  delegateUserId: number;
+  startDate: string;
+  endDate: string;
+  reason?: string;
+}
+
+export interface DelegationSummary {
+  given: Delegation[];
+  received: Delegation[];
+}

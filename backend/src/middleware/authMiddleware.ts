@@ -14,6 +14,7 @@ export interface AuthUser {
   name: string;
   departmentId: number;
   role: 'Employee' | 'Manager' | 'TimesheetAdmin' | 'Leadership';
+  managerEntraId: string | null;
 }
 
 declare global {
@@ -59,6 +60,7 @@ export const authenticate = asyncHandler(
             name: dbUser.Name,
             departmentId: dbUser.DepartmentID,
             role: dbUser.Role,
+            managerEntraId: dbUser.ManagerEntraID || null,
           };
 
           next();

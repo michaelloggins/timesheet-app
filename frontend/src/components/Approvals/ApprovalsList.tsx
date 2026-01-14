@@ -47,6 +47,7 @@ import { useApprovals, useTimesheetEntries } from '../../hooks/useApprovals';
 import {
   ApprovalStatus,
   ApprovalTimesheet,
+  ApprovalType,
   getRagStatus,
   formatDateRange,
 } from '../../services/approvalService';
@@ -393,6 +394,28 @@ const useStyles = makeStyles({
     width: '100%',
     marginTop: tokens.spacingVerticalM,
   },
+  // Approval type badge styles
+  approvalTypeBadge: {
+    marginLeft: tokens.spacingHorizontalS,
+  },
+  approvalTypePrimary: {
+    backgroundColor: tokens.colorPaletteGreenBackground2,
+    color: tokens.colorPaletteGreenForeground2,
+  },
+  approvalTypeDelegate: {
+    backgroundColor: tokens.colorPaletteBlueBorderActive,
+    color: 'white',
+  },
+  approvalTypeEscalated: {
+    backgroundColor: tokens.colorPaletteYellowBackground2,
+    color: tokens.colorPaletteYellowForeground2,
+  },
+  actingForText: {
+    fontStyle: 'italic',
+    color: tokens.colorNeutralForeground3,
+    fontSize: tokens.fontSizeBase200,
+    marginLeft: tokens.spacingHorizontalS,
+  },
 });
 
 const STATUS_OPTIONS: { value: ApprovalStatus; label: string }[] = [
@@ -400,6 +423,24 @@ const STATUS_OPTIONS: { value: ApprovalStatus; label: string }[] = [
   { value: 'Approved', label: 'Approved' },
   { value: 'Returned', label: 'Returned' },
 ];
+
+/**
+ * Get the badge color for approval type
+ */
+const getApprovalTypeBadgeColor = (
+  approvalType: ApprovalType | undefined
+): 'success' | 'informative' | 'warning' | 'subtle' => {
+  switch (approvalType) {
+    case 'Primary':
+      return 'success';
+    case 'Delegate':
+      return 'informative';
+    case 'Escalated':
+      return 'warning';
+    default:
+      return 'subtle';
+  }
+};
 
 export const ApprovalsList = () => {
   const styles = useStyles();
@@ -612,6 +653,22 @@ export const ApprovalsList = () => {
                     <Badge appearance="filled" color="warning">
                       Returned
                     </Badge>
+                  )}
+                  {/* Approval Type Badge for Cascading Approvals */}
+                  {approval.approvalType && (
+                    <Badge
+                      appearance="filled"
+                      color={getApprovalTypeBadgeColor(approval.approvalType)}
+                      className={styles.approvalTypeBadge}
+                    >
+                      {approval.approvalType}
+                    </Badge>
+                  )}
+                  {/* Show "Acting for [Manager Name]" when approving as delegate */}
+                  {approval.approvalType === 'Delegate' && approval.primaryApproverName && (
+                    <Text className={styles.actingForText}>
+                      Acting for {approval.primaryApproverName}
+                    </Text>
                   )}
                 </div>
                 <div className={styles.approvalMeta}>

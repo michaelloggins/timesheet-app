@@ -7,6 +7,8 @@ import { apiClient } from './api';
 
 export type ApprovalStatus = 'Submitted' | 'Approved' | 'Returned';
 
+export type ApprovalType = 'Primary' | 'Delegate' | 'Escalated';
+
 export interface ApprovalTimesheet {
   timesheetId: number;
   userId: number;
@@ -21,6 +23,10 @@ export interface ApprovalTimesheet {
   returnReason: string | null;
   daysWaiting: number;
   approvedByName?: string;
+  // Cascading Approval fields
+  approvalType?: ApprovalType;
+  primaryApproverName?: string;
+  primaryApproverId?: number;
 }
 
 export interface ApprovalEntry {

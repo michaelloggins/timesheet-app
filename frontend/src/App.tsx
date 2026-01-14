@@ -9,6 +9,7 @@ import { ApprovalsList } from '@components/Approvals/ApprovalsList';
 import { Scoreboard } from '@components/Scoreboard/Scoreboard';
 import { Reports } from '@components/Reports/Reports';
 import { AdminPanel } from '@components/Admin/AdminPanel';
+import { DelegationSettings } from '@components/Settings/DelegationSettings';
 
 function App() {
   const isAuthenticated = useIsAuthenticated();
@@ -28,6 +29,7 @@ function App() {
         <Route path="/scoreboard" element={<Scoreboard />} />
         <Route path="/reports" element={<Reports />} />
         <Route path="/admin" element={<AdminPanel />} />
+        <Route path="/settings/delegations" element={<DelegationSettings />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AppShell>

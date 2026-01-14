@@ -7,8 +7,8 @@ export const getUserByEntraId = async (entraId: string): Promise<User | null> =>
     .request()
     .input('entraId', entraId)
     .query(`
-      SELECT UserID, EntraIDObjectID, Email, Name, DepartmentID, Role, IsActive,
-             CreatedDate, LastLoginDate
+      SELECT UserID, EntraIDObjectID, Email, Name, DepartmentID, Role, ManagerEntraID,
+             IsActive, CreatedDate, LastLoginDate
       FROM Users
       WHERE EntraIDObjectID = @entraId AND IsActive = 1
     `);
@@ -22,8 +22,8 @@ export const getUserById = async (userId: number): Promise<User | null> => {
     .request()
     .input('userId', userId)
     .query(`
-      SELECT UserID, EntraIDObjectID, Email, Name, DepartmentID, Role, IsActive,
-             CreatedDate, LastLoginDate
+      SELECT UserID, EntraIDObjectID, Email, Name, DepartmentID, Role, ManagerEntraID,
+             IsActive, CreatedDate, LastLoginDate
       FROM Users
       WHERE UserID = @userId
     `);

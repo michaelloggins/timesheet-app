@@ -7,6 +7,7 @@ import {
   Trophy24Regular,
   DocumentTable24Regular,
   Settings24Regular,
+  PersonSwap24Regular,
 } from '@fluentui/react-icons';
 
 const useStyles = makeStyles({
@@ -82,6 +83,10 @@ export const Sidebar = ({ onNavigate }: SidebarProps) => {
         <NavLink to="/reports" className={styles.navLink} onClick={handleNavClick}>
           <DocumentTable24Regular />
           Reports
+        </NavLink>
+        <NavLink to="/settings/delegations" className={styles.navLink} onClick={handleNavClick}>
+          <PersonSwap24Regular />
+          Delegations
         </NavLink>
         <NavLink to="/admin" className={styles.navLink} onClick={handleNavClick}>
           <Settings24Regular />

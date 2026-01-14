@@ -44,5 +44,6 @@ export const authenticateUser = async (entraId: string): Promise<AuthUser | null
     name: user.Name,
     departmentId: user.DepartmentID,
     role: user.Role,
+    managerEntraId: user.ManagerEntraID || null,
   };
 };
