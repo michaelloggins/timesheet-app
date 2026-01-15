@@ -31,6 +31,7 @@ import {
   MessageBarBody,
   MessageBarTitle,
   Divider,
+  Checkbox,
 } from '@fluentui/react-components';
 import {
   Add24Regular,
@@ -43,7 +44,7 @@ import {
   PersonSwap24Regular,
 } from '@fluentui/react-icons';
 import { useNavigate } from 'react-router-dom';
-import { useDelegations, useEligibleDelegates } from '../../hooks/useDelegations';
+import { useDelegations, useEligibleDelegates, useDirectReports } from '../../hooks/useDelegations';
 import { Delegation } from '../../types';
 
 // Responsive breakpoints
@@ -190,6 +191,20 @@ const useStyles = makeStyles({
     backgroundColor: tokens.colorNeutralBackground3,
     color: tokens.colorNeutralForeground3,
   },
+  employeeList: {
+    display: 'flex',
+    flexDirection: 'column',
+    ...shorthands.gap(tokens.spacingVerticalXS),
+    maxHeight: '200px',
+    overflowY: 'auto',
+    ...shorthands.padding(tokens.spacingVerticalS),
+    ...shorthands.borderRadius(tokens.borderRadiusMedium),
+    backgroundColor: tokens.colorNeutralBackground2,
+  },
+  scopedBadge: {
+    marginLeft: tokens.spacingHorizontalS,
+    fontSize: tokens.fontSizeBase100,
+  },
   delegationDirection: {
     display: 'flex',
     alignItems: 'center',
@@ -205,6 +220,7 @@ interface CreateDelegationFormData {
   startDate: string;
   endDate: string;
   reason: string;
+  employeeIds: number[];  // Specific employees to scope (empty = all direct reports)
 }
 
 const formatDate = (dateStr: string): string => {
@@ -239,6 +255,7 @@ export const DelegationSettings = ({ embedded = false }: DelegationSettingsProps
     startDate: '',
     endDate: '',
     reason: '',
+    employeeIds: [],
   });
 
   // Hooks
@@ -256,6 +273,7 @@ export const DelegationSettings = ({ embedded = false }: DelegationSettingsProps
   } = useDelegations();
 
   const { data: eligibleDelegates = [], isLoading: loadingDelegates } = useEligibleDelegates();
+  const { data: directReports = [], isLoading: loadingDirectReports } = useDirectReports();
 
   // Handlers
   const handleOpenCreateDialog = () => {
@@ -264,6 +282,7 @@ export const DelegationSettings = ({ embedded = false }: DelegationSettingsProps
       startDate: new Date().toISOString().split('T')[0],
       endDate: '',
       reason: '',
+      employeeIds: [],
     });
     setIsCreateDialogOpen(true);
   };
@@ -275,6 +294,7 @@ export const DelegationSettings = ({ embedded = false }: DelegationSettingsProps
       startDate: '',
       endDate: '',
       reason: '',
+      employeeIds: [],
     });
   };
 
@@ -289,11 +309,21 @@ export const DelegationSettings = ({ embedded = false }: DelegationSettingsProps
         startDate: formData.startDate,
         endDate: formData.endDate,
         reason: formData.reason || undefined,
+        employeeIds: formData.employeeIds.length > 0 ? formData.employeeIds : undefined,
       });
       handleCloseCreateDialog();
     } catch (err) {
       console.error('Failed to create delegation:', err);
     }
+  };
+
+  const handleEmployeeToggle = (userId: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      employeeIds: prev.employeeIds.includes(userId)
+        ? prev.employeeIds.filter((id) => id !== userId)
+        : [...prev.employeeIds, userId],
+    }));
   };
 
   const handleOpenRevokeDialog = (delegation: Delegation) => {
@@ -418,6 +448,11 @@ export const DelegationSettings = ({ embedded = false }: DelegationSettingsProps
                       Reason: {delegation.reason}
                     </Caption1>
                   )}
+                  {delegation.scopedEmployees && delegation.scopedEmployees.length > 0 && (
+                    <Caption1 style={{ color: tokens.colorNeutralForeground3 }}>
+                      Scoped to: {delegation.scopedEmployees.map((e) => e.name).join(', ')}
+                    </Caption1>
+                  )}
                 </div>
                 {delegation.isActive && (
                   <Button
@@ -479,6 +514,11 @@ export const DelegationSettings = ({ embedded = false }: DelegationSettingsProps
                       Reason: {delegation.reason}
                     </Caption1>
                   )}
+                  {delegation.scopedEmployees && delegation.scopedEmployees.length > 0 && (
+                    <Caption1 style={{ color: tokens.colorNeutralForeground3 }}>
+                      For employees: {delegation.scopedEmployees.map((e) => e.name).join(', ')}
+                    </Caption1>
+                  )}
                 </div>
               </Card>
             ))}
@@ -533,6 +573,34 @@ export const DelegationSettings = ({ embedded = false }: DelegationSettingsProps
                   ))}
                 </Dropdown>
               </Field>
+
+              {directReports.length > 0 && (
+                <Field
+                  label="Scope to Specific Employees (Optional)"
+                  hint="Leave empty to delegate for all your direct reports"
+                  className={styles.formField}
+                >
+                  {loadingDirectReports ? (
+                    <Spinner size="tiny" label="Loading employees..." />
+                  ) : (
+                    <div className={styles.employeeList}>
+                      {directReports.map((employee) => (
+                        <Checkbox
+                          key={employee.userId}
+                          label={`${employee.name} (${employee.email})`}
+                          checked={formData.employeeIds.includes(employee.userId)}
+                          onChange={() => handleEmployeeToggle(employee.userId)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  {formData.employeeIds.length > 0 && (
+                    <Caption1 style={{ marginTop: tokens.spacingVerticalXS }}>
+                      {formData.employeeIds.length} employee(s) selected
+                    </Caption1>
+                  )}
+                </Field>
+              )}
 
               <Field label="Start Date" required className={styles.formField}>
                 <Input

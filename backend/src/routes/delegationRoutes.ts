@@ -22,6 +22,9 @@ router.get('/active', delegationController.getActiveDelegations);
 // Get eligible users who can be delegates (for dropdown)
 router.get('/eligible-delegates', delegationController.getEligibleDelegates);
 
+// Get direct reports for scoping delegations to specific employees
+router.get('/direct-reports', delegationController.getDirectReports);
+
 // Get a specific delegation by ID
 router.get('/:id', delegationController.getDelegation);
 

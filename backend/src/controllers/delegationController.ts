@@ -19,11 +19,26 @@ export const listDelegations = asyncHandler(async (req: Request, res: Response) 
     delegationService.getDelegationsReceivedByUser(user.userId),
   ]);
 
+  // Fetch scoped employees for each delegation
+  const givenWithEmployees = await Promise.all(
+    given.map(async (d) => {
+      const scopedEmployees = await delegationService.getScopedEmployees(d.DelegationID);
+      return { ...d, ScopedEmployees: scopedEmployees };
+    })
+  );
+
+  const receivedWithEmployees = await Promise.all(
+    received.map(async (d) => {
+      const scopedEmployees = await delegationService.getScopedEmployees(d.DelegationID);
+      return { ...d, ScopedEmployees: scopedEmployees };
+    })
+  );
+
   res.status(200).json({
     status: 'success',
     data: {
-      given: given.map(formatDelegationResponse),
-      received: received.map(formatDelegationResponse),
+      given: givenWithEmployees.map(formatDelegationResponse),
+      received: receivedWithEmployees.map(formatDelegationResponse),
     },
   });
 });
@@ -51,7 +66,7 @@ export const getActiveDelegations = asyncHandler(async (req: Request, res: Respo
 export const createDelegation = asyncHandler(async (req: Request, res: Response) => {
   const user = req.user!;
   // Accept both delegateId and delegateUserId for compatibility
-  const { delegateId, delegateUserId, startDate, endDate, reason } = req.body;
+  const { delegateId, delegateUserId, startDate, endDate, reason, employeeIds } = req.body;
   const actualDelegateId = delegateId || delegateUserId;
 
   // Validate required fields
@@ -85,6 +100,7 @@ export const createDelegation = asyncHandler(async (req: Request, res: Response)
     endDate: parsedEndDate,
     reason: reason || undefined,
     createdById: user.userId,
+    employeeIds: employeeIds ? employeeIds.map((id: string | number) => parseInt(String(id), 10)) : undefined,
   });
 
   // Fetch the full delegation with names
@@ -168,6 +184,21 @@ export const getEligibleDelegates = asyncHandler(async (req: Request, res: Respo
 });
 
 /**
+ * GET /api/delegations/direct-reports
+ * Get list of direct reports for the current user (for scoping delegations)
+ */
+export const getDirectReports = asyncHandler(async (req: Request, res: Response) => {
+  const user = req.user!;
+
+  const directReports = await delegationService.getDirectReports(user.userId);
+
+  res.status(200).json({
+    status: 'success',
+    data: directReports,
+  });
+});
+
+/**
  * Helper function to format delegation response
  */
 function formatDelegationResponse(delegation: delegationService.DelegationWithNames) {
@@ -197,5 +228,6 @@ function formatDelegationResponse(delegation: delegationService.DelegationWithNa
       userId: delegation.RevokedByUserID,
       name: delegation.RevokedByName,
     } : null,
+    scopedEmployees: delegation.ScopedEmployees || [],
   };
 }

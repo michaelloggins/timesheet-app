@@ -28,6 +28,7 @@ export interface DelegationWithNames extends Delegation {
   DelegateEmail: string;
   CreatedByName: string;
   RevokedByName: string | null;
+  ScopedEmployees?: ScopedEmployee[];  // If set, delegation only applies to these employees
 }
 
 export interface CreateDelegationInput {
@@ -37,13 +38,20 @@ export interface CreateDelegationInput {
   endDate: Date;
   reason?: string;
   createdById: number;
+  employeeIds?: number[];  // Optional: scope delegation to specific employees
+}
+
+export interface ScopedEmployee {
+  userId: number;
+  name: string;
+  email: string;
 }
 
 /**
  * Create a new delegation
  */
 export const createDelegation = async (input: CreateDelegationInput): Promise<Delegation> => {
-  const { delegatorId, delegateId, startDate, endDate, reason, createdById } = input;
+  const { delegatorId, delegateId, startDate, endDate, reason, createdById, employeeIds } = input;
 
   // Validation: Cannot delegate to yourself
   if (delegatorId === delegateId) {
@@ -124,6 +132,42 @@ export const createDelegation = async (input: CreateDelegationInput): Promise<De
     `);
 
   const delegation = result.recordset[0] as Delegation;
+
+  // If specific employees are scoped, add them to DelegationEmployees
+  if (employeeIds && employeeIds.length > 0) {
+    // Verify all employees are in the delegator's org tree
+    const orgCheck = await pool.request()
+      .input('delegatorId', delegatorId)
+      .query(`
+        SELECT UserID FROM Users
+        WHERE ManagerEntraID = (SELECT EntraIDObjectID FROM Users WHERE UserID = @delegatorId)
+          AND IsActive = 1
+      `);
+
+    const validEmployeeIds = new Set(orgCheck.recordset.map((r: { UserID: number }) => r.UserID));
+    const invalidEmployees = employeeIds.filter(id => !validEmployeeIds.has(id));
+
+    if (invalidEmployees.length > 0) {
+      // Rollback - delete the delegation we just created
+      await pool.request()
+        .input('delegationId', delegation.DelegationID)
+        .query('DELETE FROM ApprovalDelegation WHERE DelegationID = @delegationId');
+      throw new AppError(400, 'Some employees are not in your direct reports');
+    }
+
+    // Insert scoped employees
+    for (const employeeId of employeeIds) {
+      await pool.request()
+        .input('delegationId', delegation.DelegationID)
+        .input('employeeId', employeeId)
+        .query(`
+          INSERT INTO DelegationEmployees (DelegationID, EmployeeUserID)
+          VALUES (@delegationId, @employeeId)
+        `);
+    }
+
+    logger.info(`Delegation ${delegation.DelegationID} scoped to ${employeeIds.length} employees`);
+  }
 
   // Log the creation
   await logDelegationAudit({
@@ -365,6 +409,49 @@ export const getDelegationById = async (delegationId: number): Promise<Delegatio
     `);
 
   return result.recordset.length > 0 ? result.recordset[0] as DelegationWithNames : null;
+};
+
+/**
+ * Get direct reports for a manager (employees they can include in a delegation)
+ */
+export const getDirectReports = async (
+  managerId: number
+): Promise<{ userId: number; name: string; email: string }[]> => {
+  const pool = getPool();
+
+  const result = await pool.request()
+    .input('managerId', managerId)
+    .query(`
+      SELECT u.UserID as userId, u.Name as name, u.Email as email
+      FROM Users u
+      INNER JOIN Users mgr ON u.ManagerEntraID = mgr.EntraIDObjectID
+      WHERE mgr.UserID = @managerId
+        AND u.IsActive = 1
+      ORDER BY u.Name
+    `);
+
+  return result.recordset;
+};
+
+/**
+ * Get scoped employees for a delegation
+ */
+export const getScopedEmployees = async (
+  delegationId: number
+): Promise<ScopedEmployee[]> => {
+  const pool = getPool();
+
+  const result = await pool.request()
+    .input('delegationId', delegationId)
+    .query(`
+      SELECT u.UserID as userId, u.Name as name, u.Email as email
+      FROM DelegationEmployees de
+      INNER JOIN Users u ON de.EmployeeUserID = u.UserID
+      WHERE de.DelegationID = @delegationId
+      ORDER BY u.Name
+    `);
+
+  return result.recordset;
 };
 
 /**

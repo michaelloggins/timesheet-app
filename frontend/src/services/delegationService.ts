@@ -60,3 +60,13 @@ export const getEligibleDelegates = async (): Promise<{ userId: number; name: st
   );
   return response.data.data || [];
 };
+
+/**
+ * Get direct reports for scoping delegations to specific employees
+ */
+export const getDirectReports = async (): Promise<{ userId: number; name: string; email: string }[]> => {
+  const response = await apiClient.get<ApiResponse<{ userId: number; name: string; email: string }[]>>(
+    '/delegations/direct-reports'
+  );
+  return response.data.data || [];
+};

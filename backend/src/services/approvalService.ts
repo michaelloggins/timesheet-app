@@ -99,9 +99,11 @@ export const getApprovalAuthorization = async (
   }
 
   // Check 5: Delegate approval (someone delegated to this approver)
+  // Also checks if delegation is scoped to specific employees
   const delegateResult = await pool.request()
     .input('approverId', approverId)
     .input('employeeManagerEntraId', employee.ManagerEntraID)
+    .input('employeeUserId', employee.UserID)
     .query(`
       SELECT ad.DelegatorUserID
       FROM ApprovalDelegation ad
@@ -110,6 +112,11 @@ export const getApprovalAuthorization = async (
         AND ad.IsActive = 1
         AND CAST(GETUTCDATE() AS DATE) BETWEEN ad.StartDate AND ad.EndDate
         AND delegator.EntraIDObjectID = @employeeManagerEntraId
+        -- Check if delegation is scoped: if DelegationEmployees has rows, employee must be in list
+        AND (
+          NOT EXISTS (SELECT 1 FROM DelegationEmployees de WHERE de.DelegationID = ad.DelegationID)
+          OR @employeeUserId IN (SELECT de.EmployeeUserID FROM DelegationEmployees de WHERE de.DelegationID = ad.DelegationID)
+        )
     `);
 
   if (delegateResult.recordset.length > 0) {

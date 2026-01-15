@@ -172,6 +172,7 @@ export const getPendingApprovals = asyncHandler(async (req: Request, res: Respon
       ),
       DelegatedReports AS (
         -- Find employees whose managers have delegated to the current user
+        -- Respects scoped delegations (if DelegationEmployees has entries, only those employees)
         SELECT
           u.UserID,
           u.EntraIDObjectID,
@@ -187,6 +188,11 @@ export const getPendingApprovals = asyncHandler(async (req: Request, res: Respon
           AND ad.IsActive = 1
           AND CAST(GETUTCDATE() AS DATE) BETWEEN ad.StartDate AND ad.EndDate
           AND u.IsActive = 1
+          -- Check if delegation is scoped: if DelegationEmployees has rows, only include those employees
+          AND (
+            NOT EXISTS (SELECT 1 FROM DelegationEmployees de WHERE de.DelegationID = ad.DelegationID)
+            OR u.UserID IN (SELECT de.EmployeeUserID FROM DelegationEmployees de WHERE de.DelegationID = ad.DelegationID)
+          )
           -- Exclude users already in org tree to avoid duplicates
           AND u.UserID NOT IN (SELECT UserID FROM OrgTree)
       ),
@@ -417,6 +423,11 @@ export const getTimesheetEntries = asyncHandler(async (req: Request, res: Respon
           AND ad.IsActive = 1
           AND CAST(GETUTCDATE() AS DATE) BETWEEN ad.StartDate AND ad.EndDate
           AND u.IsActive = 1
+          -- Check if delegation is scoped
+          AND (
+            NOT EXISTS (SELECT 1 FROM DelegationEmployees de WHERE de.DelegationID = ad.DelegationID)
+            OR u.UserID IN (SELECT de.EmployeeUserID FROM DelegationEmployees de WHERE de.DelegationID = ad.DelegationID)
+          )
       ),
       AllAccessible AS (
         SELECT UserID FROM OrgTree

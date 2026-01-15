@@ -11,6 +11,7 @@ import {
   createDelegation,
   revokeDelegation,
   getEligibleDelegates,
+  getDirectReports,
 } from '../services/delegationService';
 import { CreateDelegationRequest, Delegation, DelegationSummary } from '../types';
 
@@ -104,6 +105,17 @@ export const useEligibleDelegates = () => {
   return useQuery<{ userId: number; name: string; email: string }[]>({
     queryKey: ['eligibleDelegates'],
     queryFn: getEligibleDelegates,
+    staleTime: 1000 * 60 * 10, // 10 minutes
+  });
+};
+
+/**
+ * Hook to fetch direct reports for scoping delegations
+ */
+export const useDirectReports = () => {
+  return useQuery<{ userId: number; name: string; email: string }[]>({
+    queryKey: ['directReports'],
+    queryFn: getDirectReports,
     staleTime: 1000 * 60 * 10, // 10 minutes
   });
 };

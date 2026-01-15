@@ -143,6 +143,7 @@ export interface Delegation {
   createdDate: string;
   revokedDate?: string;
   revokedByUserId?: number;
+  scopedEmployees?: ScopedEmployee[];  // If set, delegation only applies to these employees
 }
 
 export interface CreateDelegationRequest {
@@ -150,6 +151,13 @@ export interface CreateDelegationRequest {
   startDate: string;
   endDate: string;
   reason?: string;
+  employeeIds?: number[];  // Optional: scope delegation to specific employees
+}
+
+export interface ScopedEmployee {
+  userId: number;
+  name: string;
+  email: string;
 }
 
 export interface DelegationSummary {
