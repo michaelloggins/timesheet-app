@@ -55,12 +55,14 @@ const useStyles = makeStyles({
     height: 'auto',
   },
   appName: {
+    display: 'block',
     marginBottom: '0.5rem',
     color: '#404041',
     fontSize: tokens.fontSizeBase500,
     fontWeight: tokens.fontWeightSemibold,
   },
   tagline: {
+    display: 'block',
     marginBottom: '2rem',
     color: '#666666',
     fontSize: tokens.fontSizeBase300,
