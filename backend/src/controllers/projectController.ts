@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { asyncHandler } from '../middleware/errorHandler';
 import { getPool } from '../config/database';
 import { logger } from '../utils/logger';
+import { logAdminAction } from '../utils/adminAuditLogger';
 
 export const getProjects = asyncHandler(async (req: Request, res: Response) => {
   const pool = getPool();
@@ -53,6 +54,7 @@ export const getProjectById = asyncHandler(async (req: Request, res: Response) =
 
 export const createProject = asyncHandler(async (req: Request, res: Response) => {
   const pool = getPool();
+  const user = req.user!;
   const { projectNumber, projectName, departmentId, projectType, grantIdentifier, isActive = true } = req.body;
 
   // departmentId is optional - NULL means universal/all departments
@@ -87,6 +89,17 @@ export const createProject = asyncHandler(async (req: Request, res: Response) =>
   const projectId = result.recordset[0].ProjectID;
   logger.info(`Created project: ${projectName} (${projectNumber})`);
 
+  // Log admin action
+  await logAdminAction({
+    actionType: 'PROJECT_CREATE',
+    actionByUserId: user.userId,
+    entityType: 'Project',
+    entityId: projectId,
+    entityName: `${projectNumber} - ${projectName}`,
+    details: { projectNumber, projectName, departmentId, projectType, grantIdentifier },
+    ipAddress: req.ip || req.socket.remoteAddress,
+  });
+
   res.status(201).json({
     status: 'success',
     data: {
@@ -103,13 +116,14 @@ export const createProject = asyncHandler(async (req: Request, res: Response) =>
 
 export const updateProject = asyncHandler(async (req: Request, res: Response) => {
   const pool = getPool();
+  const user = req.user!;
   const projectId = parseInt(req.params.id);
   const { projectNumber, projectName, departmentId, projectType, grantIdentifier, isActive } = req.body;
 
   // Check if project exists
   const existing = await pool.request()
     .input('id', projectId)
-    .query('SELECT ProjectID, IsActive FROM Projects WHERE ProjectID = @id');
+    .query('SELECT ProjectID, IsActive, ProjectName FROM Projects WHERE ProjectID = @id');
 
   if (existing.recordset.length === 0) {
     res.status(404).json({ status: 'error', message: 'Project not found' });
@@ -162,6 +176,17 @@ export const updateProject = asyncHandler(async (req: Request, res: Response) =>
     .input('id', projectId)
     .query('SELECT * FROM Projects WHERE ProjectID = @id');
 
+  // Log admin action
+  await logAdminAction({
+    actionType: 'PROJECT_UPDATE',
+    actionByUserId: user.userId,
+    entityType: 'Project',
+    entityId: projectId,
+    entityName: updated.recordset[0].ProjectName,
+    details: { projectNumber, projectName, departmentId, projectType, grantIdentifier, isActive },
+    ipAddress: req.ip || req.socket.remoteAddress,
+  });
+
   res.status(200).json({ status: 'success', data: updated.recordset[0] });
 });
 
@@ -171,6 +196,7 @@ export const updateProject = asyncHandler(async (req: Request, res: Response) =>
  */
 export const deactivateProject = asyncHandler(async (req: Request, res: Response) => {
   const pool = getPool();
+  const user = req.user!;
   const projectId = parseInt(req.params.id);
   const { reason } = req.body;
 
@@ -196,6 +222,17 @@ export const deactivateProject = asyncHandler(async (req: Request, res: Response
     `);
 
   logger.info(`Deactivated project ${projectId}: ${existing.recordset[0].ProjectName}`);
+
+  // Log admin action
+  await logAdminAction({
+    actionType: 'PROJECT_DEACTIVATE',
+    actionByUserId: user.userId,
+    entityType: 'Project',
+    entityId: projectId,
+    entityName: existing.recordset[0].ProjectName,
+    details: { reason },
+    ipAddress: req.ip || req.socket.remoteAddress,
+  });
 
   res.status(200).json({
     status: 'success',

@@ -3,6 +3,7 @@ import { asyncHandler } from '../middleware/errorHandler';
 import { userSyncService } from '../services/userSyncService';
 import { getPool } from '../config/database';
 import { logger } from '../utils/logger';
+import { logAdminAction, logUserSync } from '../utils/adminAuditLogger';
 
 export const getUsers = asyncHandler(async (req: Request, res: Response) => {
   const pool = getPool();
@@ -21,8 +22,16 @@ export const getUsers = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const syncUsersFromEntra = asyncHandler(async (req: Request, res: Response) => {
+  const user = req.user!;
   logger.info('Starting user sync from Entra ID groups...');
   const result = await userSyncService.syncUsersFromGroups();
+
+  // Log the sync action
+  await logUserSync(
+    user.userId,
+    result,
+    req.ip || req.socket.remoteAddress
+  );
 
   const status = result.errors.length === 0 ? 'success' : 'partial';
   res.status(200).json({
@@ -62,6 +71,7 @@ export const getDepartments = asyncHandler(async (req: Request, res: Response) =
 
 export const createDepartment = asyncHandler(async (req: Request, res: Response) => {
   const pool = getPool();
+  const user = req.user!;
   const { departmentCode, departmentName, isActive = true } = req.body;
 
   if (!departmentCode || !departmentName) {
@@ -92,6 +102,16 @@ export const createDepartment = asyncHandler(async (req: Request, res: Response)
   const departmentId = result.recordset[0].DepartmentID;
   logger.info(`Created department: ${departmentName} (${departmentCode})`);
 
+  // Log admin action
+  await logAdminAction({
+    actionType: 'DEPARTMENT_CREATE',
+    actionByUserId: user.userId,
+    entityType: 'Department',
+    entityId: departmentId,
+    entityName: `${departmentCode} - ${departmentName}`,
+    ipAddress: req.ip || req.socket.remoteAddress,
+  });
+
   res.status(201).json({
     status: 'success',
     data: {
@@ -105,13 +125,14 @@ export const createDepartment = asyncHandler(async (req: Request, res: Response)
 
 export const updateDepartment = asyncHandler(async (req: Request, res: Response) => {
   const pool = getPool();
+  const user = req.user!;
   const departmentId = parseInt(req.params.id);
   const { departmentCode, departmentName, isActive } = req.body;
 
   // Check if department exists
   const existing = await pool.request()
     .input('id', departmentId)
-    .query('SELECT DepartmentID FROM Departments WHERE DepartmentID = @id');
+    .query('SELECT DepartmentID, DepartmentCode, DepartmentName FROM Departments WHERE DepartmentID = @id');
 
   if (existing.recordset.length === 0) {
     res.status(404).json({ status: 'error', message: 'Department not found' });
@@ -151,6 +172,17 @@ export const updateDepartment = asyncHandler(async (req: Request, res: Response)
   const updated = await pool.request()
     .input('id', departmentId)
     .query('SELECT * FROM Departments WHERE DepartmentID = @id');
+
+  // Log admin action
+  await logAdminAction({
+    actionType: 'DEPARTMENT_UPDATE',
+    actionByUserId: user.userId,
+    entityType: 'Department',
+    entityId: departmentId,
+    entityName: updated.recordset[0].DepartmentName,
+    details: { departmentCode, departmentName, isActive },
+    ipAddress: req.ip || req.socket.remoteAddress,
+  });
 
   res.status(200).json({ status: 'success', data: updated.recordset[0] });
 });
@@ -304,6 +336,7 @@ export const getHolidays = asyncHandler(async (req: Request, res: Response) => {
  */
 export const createHoliday = asyncHandler(async (req: Request, res: Response) => {
   const pool = getPool();
+  const user = req.user!;
   const { holidayName, holidayDate, defaultHours = 8.0 } = req.body;
 
   if (!holidayName || !holidayDate) {
@@ -331,12 +364,24 @@ export const createHoliday = asyncHandler(async (req: Request, res: Response) =>
       SELECT SCOPE_IDENTITY() AS HolidayID;
     `);
 
+  const holidayId = result.recordset[0].HolidayID;
   logger.info(`Created holiday: ${holidayName} on ${holidayDate}`);
+
+  // Log admin action
+  await logAdminAction({
+    actionType: 'HOLIDAY_CREATE',
+    actionByUserId: user.userId,
+    entityType: 'Holiday',
+    entityId: holidayId,
+    entityName: holidayName,
+    details: { holidayDate, defaultHours },
+    ipAddress: req.ip || req.socket.remoteAddress,
+  });
 
   res.status(201).json({
     status: 'success',
     data: {
-      holidayId: result.recordset[0].HolidayID,
+      holidayId,
       holidayName,
       holidayDate,
       defaultHours,
@@ -349,12 +394,13 @@ export const createHoliday = asyncHandler(async (req: Request, res: Response) =>
  */
 export const updateHoliday = asyncHandler(async (req: Request, res: Response) => {
   const pool = getPool();
+  const user = req.user!;
   const holidayId = parseInt(req.params.id);
   const { holidayName, holidayDate, defaultHours } = req.body;
 
   const existing = await pool.request()
     .input('id', holidayId)
-    .query('SELECT HolidayID FROM Holidays WHERE HolidayID = @id');
+    .query('SELECT HolidayID, HolidayName FROM Holidays WHERE HolidayID = @id');
 
   if (existing.recordset.length === 0) {
     res.status(404).json({ status: 'error', message: 'Holiday not found' });
@@ -392,6 +438,17 @@ export const updateHoliday = asyncHandler(async (req: Request, res: Response) =>
     .input('id', holidayId)
     .query('SELECT * FROM Holidays WHERE HolidayID = @id');
 
+  // Log admin action
+  await logAdminAction({
+    actionType: 'HOLIDAY_UPDATE',
+    actionByUserId: user.userId,
+    entityType: 'Holiday',
+    entityId: holidayId,
+    entityName: updated.recordset[0].HolidayName,
+    details: { holidayName, holidayDate, defaultHours },
+    ipAddress: req.ip || req.socket.remoteAddress,
+  });
+
   res.status(200).json({ status: 'success', data: updated.recordset[0] });
 });
 
@@ -400,11 +457,27 @@ export const updateHoliday = asyncHandler(async (req: Request, res: Response) =>
  */
 export const deleteHoliday = asyncHandler(async (req: Request, res: Response) => {
   const pool = getPool();
+  const user = req.user!;
   const holidayId = parseInt(req.params.id);
+
+  // Get holiday name for audit log
+  const existing = await pool.request()
+    .input('id', holidayId)
+    .query('SELECT HolidayName FROM Holidays WHERE HolidayID = @id');
 
   await pool.request()
     .input('id', holidayId)
     .query('UPDATE Holidays SET IsActive = 0, ModifiedDate = GETUTCDATE() WHERE HolidayID = @id');
+
+  // Log admin action
+  await logAdminAction({
+    actionType: 'HOLIDAY_DELETE',
+    actionByUserId: user.userId,
+    entityType: 'Holiday',
+    entityId: holidayId,
+    entityName: existing.recordset[0]?.HolidayName || `Holiday ${holidayId}`,
+    ipAddress: req.ip || req.socket.remoteAddress,
+  });
 
   res.status(200).json({ status: 'success', message: 'Holiday deleted' });
 });

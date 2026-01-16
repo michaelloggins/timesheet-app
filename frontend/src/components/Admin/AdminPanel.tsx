@@ -17,6 +17,7 @@ import {
   Badge,
   makeStyles,
   tokens,
+  shorthands,
   TabList,
   Tab,
   Spinner,
@@ -36,6 +37,15 @@ import {
   PopoverSurface,
   Link,
   Text,
+  Dialog,
+  DialogSurface,
+  DialogTitle,
+  DialogBody,
+  DialogContent,
+  DialogActions,
+  Divider,
+  Body1Strong,
+  Caption1,
 } from '@fluentui/react-components';
 import {
   AddRegular,
@@ -47,6 +57,13 @@ import {
   CheckmarkCircleRegular,
   DismissCircleRegular,
   HistoryRegular,
+  Dismiss24Regular,
+  PersonAddRegular,
+  PersonEditRegular,
+  PersonDeleteRegular,
+  BuildingRegular,
+  WarningRegular,
+  ErrorCircleRegular,
 } from '@fluentui/react-icons';
 import { useProjects, useCreateProject, useUpdateProject, useDeactivateProject } from '../../hooks/useProjects';
 import { useUsers, useSyncUsers, User } from '../../hooks/useUsers';
@@ -135,6 +152,61 @@ const useStyles = makeStyles({
   cellWrap: {
     wordBreak: 'break-word',
   },
+  // Sync Results Dialog styles
+  syncDialogSurface: {
+    maxWidth: '550px',
+    width: '90vw',
+  },
+  syncResultsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, 1fr)',
+    ...shorthands.gap(tokens.spacingVerticalM, tokens.spacingHorizontalL),
+    marginBottom: tokens.spacingVerticalL,
+  },
+  syncResultItem: {
+    display: 'flex',
+    alignItems: 'center',
+    ...shorthands.gap(tokens.spacingHorizontalM),
+    ...shorthands.padding(tokens.spacingVerticalS, tokens.spacingHorizontalM),
+    ...shorthands.borderRadius(tokens.borderRadiusMedium),
+    backgroundColor: tokens.colorNeutralBackground2,
+  },
+  syncResultIcon: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '40px',
+    height: '40px',
+    ...shorthands.borderRadius(tokens.borderRadiusMedium),
+  },
+  syncResultValue: {
+    fontSize: tokens.fontSizeBase500,
+    fontWeight: tokens.fontWeightSemibold,
+  },
+  syncResultLabel: {
+    fontSize: tokens.fontSizeBase200,
+    color: tokens.colorNeutralForeground3,
+  },
+  syncSection: {
+    marginTop: tokens.spacingVerticalM,
+  },
+  syncSectionHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    ...shorthands.gap(tokens.spacingHorizontalS),
+    marginBottom: tokens.spacingVerticalS,
+  },
+  syncErrorList: {
+    maxHeight: '150px',
+    overflowY: 'auto',
+    ...shorthands.padding(tokens.spacingVerticalS),
+    ...shorthands.borderRadius(tokens.borderRadiusMedium),
+    backgroundColor: tokens.colorNeutralBackground2,
+  },
+  syncErrorItem: {
+    ...shorthands.padding(tokens.spacingVerticalXS, '0'),
+    fontSize: tokens.fontSizeBase200,
+  },
 });
 
 
@@ -149,6 +221,7 @@ export const AdminPanel = () => {
   const [editingHoliday, setEditingHoliday] = useState<Holiday | null>(null);
   const [auditFilters, setAuditFilters] = useState<AuditLogFilters>({ days: 30, limit: 100 });
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [isSyncResultsOpen, setIsSyncResultsOpen] = useState(false);
 
   // React Query hooks - Projects
   const { data: projects, isLoading: projectsLoading, error: projectsError } = useProjects();
@@ -625,25 +698,24 @@ export const AdminPanel = () => {
               <Button
                 appearance="primary"
                 icon={<ArrowSyncRegular />}
-                onClick={() => syncUsers.mutate()}
+                onClick={async () => {
+                  await syncUsers.mutateAsync();
+                  setIsSyncResultsOpen(true);
+                }}
                 disabled={syncUsers.isPending}
               >
                 {syncUsers.isPending ? 'Syncing...' : 'Sync from Entra ID'}
               </Button>
             </div>
 
-            {syncUsers.isSuccess && (
-              <MessageBar intent={syncUsers.data.conflicts.length > 0 ? 'warning' : 'success'}>
+            {syncUsers.isSuccess && !isSyncResultsOpen && (
+              <MessageBar intent={syncUsers.data.errors.length > 0 ? 'warning' : 'success'}>
                 <MessageBarBody>
                   <MessageBarTitle>Sync Complete</MessageBarTitle>
                   <span>
-                    Users: {syncUsers.data.created} created, {syncUsers.data.updated} updated, {syncUsers.data.deactivated} deactivated
-                    {(syncUsers.data.departmentsCreated > 0 || syncUsers.data.departmentsUpdated > 0) &&
-                      ` | Departments: ${syncUsers.data.departmentsCreated} created, ${syncUsers.data.departmentsUpdated} updated`}
-                    {syncUsers.data.conflicts.length > 0 &&
-                      ` | ${syncUsers.data.conflicts.length} conflicts (emails sent)`}
-                    {syncUsers.data.errors.length > 0 &&
-                      ` | ${syncUsers.data.errors.length} errors`}
+                    {syncUsers.data.created + syncUsers.data.updated + syncUsers.data.deactivated} users processed
+                    {syncUsers.data.errors.length > 0 && ` with ${syncUsers.data.errors.length} errors`}.{' '}
+                    <Link onClick={() => setIsSyncResultsOpen(true)}>View Details</Link>
                   </span>
                 </MessageBarBody>
               </MessageBar>
@@ -903,6 +975,131 @@ export const AdminPanel = () => {
         onClose={() => setSelectedUser(null)}
         user={selectedUser}
       />
+
+      {/* Sync Results Dialog */}
+      <Dialog open={isSyncResultsOpen} onOpenChange={(_, data) => setIsSyncResultsOpen(data.open)}>
+        <DialogSurface className={styles.syncDialogSurface}>
+          <DialogTitle>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>Entra ID Sync Results</span>
+              <Button
+                appearance="subtle"
+                icon={<Dismiss24Regular />}
+                onClick={() => setIsSyncResultsOpen(false)}
+                aria-label="Close"
+              />
+            </div>
+          </DialogTitle>
+          <DialogBody>
+            <DialogContent>
+              {syncUsers.data && (
+                <>
+                  {/* User Stats */}
+                  <Body1Strong style={{ marginBottom: tokens.spacingVerticalS, display: 'block' }}>
+                    Users
+                  </Body1Strong>
+                  <div className={styles.syncResultsGrid}>
+                    <div className={styles.syncResultItem}>
+                      <div className={styles.syncResultIcon} style={{ backgroundColor: tokens.colorPaletteGreenBackground2 }}>
+                        <PersonAddRegular style={{ color: tokens.colorPaletteGreenForeground1 }} />
+                      </div>
+                      <div>
+                        <div className={styles.syncResultValue}>{syncUsers.data.created}</div>
+                        <div className={styles.syncResultLabel}>Created</div>
+                      </div>
+                    </div>
+                    <div className={styles.syncResultItem}>
+                      <div className={styles.syncResultIcon} style={{ backgroundColor: tokens.colorPaletteBlueBackground2 }}>
+                        <PersonEditRegular style={{ color: tokens.colorPaletteBlueForeground2 }} />
+                      </div>
+                      <div>
+                        <div className={styles.syncResultValue}>{syncUsers.data.updated}</div>
+                        <div className={styles.syncResultLabel}>Updated</div>
+                      </div>
+                    </div>
+                    <div className={styles.syncResultItem}>
+                      <div className={styles.syncResultIcon} style={{ backgroundColor: tokens.colorPaletteRedBackground2 }}>
+                        <PersonDeleteRegular style={{ color: tokens.colorPaletteRedForeground1 }} />
+                      </div>
+                      <div>
+                        <div className={styles.syncResultValue}>{syncUsers.data.deactivated}</div>
+                        <div className={styles.syncResultLabel}>Deactivated</div>
+                      </div>
+                    </div>
+                    <div className={styles.syncResultItem}>
+                      <div className={styles.syncResultIcon} style={{ backgroundColor: tokens.colorPaletteYellowBackground2 }}>
+                        <BuildingRegular style={{ color: tokens.colorPaletteYellowForeground1 }} />
+                      </div>
+                      <div>
+                        <div className={styles.syncResultValue}>
+                          {syncUsers.data.departmentsCreated + syncUsers.data.departmentsUpdated}
+                        </div>
+                        <div className={styles.syncResultLabel}>Depts Synced</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Conflicts Section */}
+                  {syncUsers.data.conflicts.length > 0 && (
+                    <div className={styles.syncSection}>
+                      <Divider />
+                      <div className={styles.syncSectionHeader} style={{ marginTop: tokens.spacingVerticalM }}>
+                        <WarningRegular style={{ color: tokens.colorPaletteYellowForeground1 }} />
+                        <Body1Strong>Conflicts ({syncUsers.data.conflicts.length})</Body1Strong>
+                      </div>
+                      <Caption1 style={{ display: 'block', marginBottom: tokens.spacingVerticalS }}>
+                        These users are members of multiple department groups. Notification emails have been sent.
+                      </Caption1>
+                      <div className={styles.syncErrorList}>
+                        {syncUsers.data.conflicts.map((conflict, index) => (
+                          <div key={index} className={styles.syncErrorItem}>
+                            {conflict}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Errors Section */}
+                  {syncUsers.data.errors.length > 0 && (
+                    <div className={styles.syncSection}>
+                      <Divider />
+                      <div className={styles.syncSectionHeader} style={{ marginTop: tokens.spacingVerticalM }}>
+                        <ErrorCircleRegular style={{ color: tokens.colorPaletteRedForeground1 }} />
+                        <Body1Strong>Errors ({syncUsers.data.errors.length})</Body1Strong>
+                      </div>
+                      <Caption1 style={{ display: 'block', marginBottom: tokens.spacingVerticalS }}>
+                        The following errors occurred during sync:
+                      </Caption1>
+                      <div className={styles.syncErrorList}>
+                        {syncUsers.data.errors.map((error, index) => (
+                          <div key={index} className={styles.syncErrorItem} style={{ color: tokens.colorPaletteRedForeground1 }}>
+                            {error}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Success message if no issues */}
+                  {syncUsers.data.conflicts.length === 0 && syncUsers.data.errors.length === 0 && (
+                    <MessageBar intent="success" style={{ marginTop: tokens.spacingVerticalM }}>
+                      <MessageBarBody>
+                        Sync completed successfully with no issues.
+                      </MessageBarBody>
+                    </MessageBar>
+                  )}
+                </>
+              )}
+            </DialogContent>
+            <DialogActions>
+              <Button appearance="primary" onClick={() => setIsSyncResultsOpen(false)}>
+                Close
+              </Button>
+            </DialogActions>
+          </DialogBody>
+        </DialogSurface>
+      </Dialog>
     </div>
   );
 };
