@@ -48,6 +48,7 @@ import {
   Dismiss24Regular,
 } from '@fluentui/react-icons';
 import { apiClient } from '../../services/api';
+import logo from '../../assets/miravista_logo_transparent.png';
 import { useCurrentUser } from '../../hooks/useCurrentUser';
 
 const useStyles = makeStyles({
@@ -306,6 +307,25 @@ export const Reports = () => {
   // Print dialog state
   const [showPrintDialog, setShowPrintDialog] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
+  const [logoBase64, setLogoBase64] = useState<string>('');
+
+  // Convert logo to base64 for print functionality
+  useEffect(() => {
+    const convertLogoToBase64 = async () => {
+      try {
+        const response = await fetch(logo);
+        const blob = await response.blob();
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setLogoBase64(reader.result as string);
+        };
+        reader.readAsDataURL(blob);
+      } catch (error) {
+        console.error('Failed to convert logo to base64:', error);
+      }
+    };
+    convertLogoToBase64();
+  }, []);
 
   // Fetch filter options
   const { data: filterOptions } = useQuery<FilterOptions>({
@@ -410,7 +430,7 @@ export const Reports = () => {
             body { font-family: 'Roboto Condensed', Arial, sans-serif; padding: 20px; color: #404041; }
             .print-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 3px solid #286f1f; }
             .print-logo { display: flex; align-items: center; gap: 12px; }
-            .print-logo-icon { width: 48px; height: 48px; background-color: #286f1f; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 24px; }
+            .print-logo img { height: 48px; width: auto; }
             .print-company-name { font-size: 24px; font-weight: bold; color: #286f1f; }
             .print-report-title { text-align: right; }
             .print-report-title h2 { font-size: 18px; font-weight: bold; color: #404041; }
@@ -750,7 +770,7 @@ export const Reports = () => {
                 {/* Report Header */}
                 <div className="print-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', paddingBottom: '16px', borderBottom: '3px solid #286f1f' }}>
                   <div className="print-logo" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div className="print-logo-icon" style={{ width: '48px', height: '48px', backgroundColor: '#286f1f', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold', fontSize: '24px' }}>Y</div>
+                    <img src={logoBase64 || logo} alt="MiraVista" style={{ height: '48px', width: 'auto' }} />
                     <span className="print-company-name" style={{ fontFamily: '"Roboto Condensed", sans-serif', fontSize: '24px', fontWeight: 'bold', color: '#286f1f' }}>MiraVista Diagnostics</span>
                   </div>
                   <div className="print-report-title" style={{ textAlign: 'right' }}>
