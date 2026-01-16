@@ -42,9 +42,9 @@ const useStyles = makeStyles({
   // Desktop week header - hidden on mobile
   weekHeader: {
     display: 'grid',
-    gridTemplateColumns: '180px repeat(7, 1fr)',
-    ...shorthands.gap(tokens.spacingHorizontalXS),
-    ...shorthands.padding(tokens.spacingVerticalXS, tokens.spacingHorizontalS),
+    gridTemplateColumns: '200px repeat(7, minmax(100px, 1fr))',
+    ...shorthands.gap(tokens.spacingHorizontalS),
+    ...shorthands.padding(tokens.spacingVerticalS, tokens.spacingHorizontalM),
     backgroundColor: '#286f1f',
     color: 'white',
     ...shorthands.borderRadius('8px'),
@@ -115,10 +115,10 @@ const useStyles = makeStyles({
   // Desktop entry row
   entryRow: {
     display: 'grid',
-    gridTemplateColumns: '180px repeat(7, 1fr)',
-    ...shorthands.gap(tokens.spacingHorizontalXS),
+    gridTemplateColumns: '200px repeat(7, minmax(100px, 1fr))',
+    ...shorthands.gap(tokens.spacingHorizontalS),
     alignItems: 'start',
-    ...shorthands.padding(tokens.spacingVerticalXS),
+    ...shorthands.padding(tokens.spacingVerticalXS, tokens.spacingHorizontalM),
     '@media (max-width: 768px)': {
       display: 'none',
     },
@@ -288,9 +288,9 @@ const useStyles = makeStyles({
   // Desktop total row
   totalRow: {
     display: 'grid',
-    gridTemplateColumns: '180px repeat(7, 1fr)',
-    ...shorthands.gap(tokens.spacingHorizontalXS),
-    ...shorthands.padding(tokens.spacingVerticalXS, tokens.spacingHorizontalS),
+    gridTemplateColumns: '200px repeat(7, minmax(100px, 1fr))',
+    ...shorthands.gap(tokens.spacingHorizontalS),
+    ...shorthands.padding(tokens.spacingVerticalS, tokens.spacingHorizontalM),
     backgroundColor: '#e8f5e3',
     ...shorthands.borderRadius('8px'),
     alignItems: 'center',

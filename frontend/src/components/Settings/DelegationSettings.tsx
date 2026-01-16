@@ -45,6 +45,7 @@ import {
 } from '@fluentui/react-icons';
 import { useNavigate } from 'react-router-dom';
 import { useDelegations, useEligibleDelegates, useDirectReports } from '../../hooks/useDelegations';
+import { useCurrentUser } from '../../hooks/useCurrentUser';
 import { Delegation } from '../../types';
 
 // Responsive breakpoints
@@ -216,6 +217,7 @@ const useStyles = makeStyles({
 });
 
 interface CreateDelegationFormData {
+  delegatorUserId: number | null;  // For TimesheetAdmins creating on behalf of another manager
   delegateUserId: number | null;
   startDate: string;
   endDate: string;
@@ -245,12 +247,14 @@ interface DelegationSettingsProps {
 export const DelegationSettings = ({ embedded = false }: DelegationSettingsProps) => {
   const styles = useStyles();
   const navigate = useNavigate();
+  const { user, isAdmin } = useCurrentUser();
 
   // State
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isRevokeDialogOpen, setIsRevokeDialogOpen] = useState(false);
   const [selectedDelegation, setSelectedDelegation] = useState<Delegation | null>(null);
   const [formData, setFormData] = useState<CreateDelegationFormData>({
+    delegatorUserId: null,
     delegateUserId: null,
     startDate: '',
     endDate: '',
@@ -275,9 +279,14 @@ export const DelegationSettings = ({ embedded = false }: DelegationSettingsProps
   const { data: eligibleDelegates = [], isLoading: loadingDelegates } = useEligibleDelegates();
   const { data: directReports = [], isLoading: loadingDirectReports } = useDirectReports();
 
+  // For TimesheetAdmins: Get list of managers who can be delegated for
+  // We reuse eligibleDelegates since those are users with Manager/Leadership/Admin roles
+  const eligibleDelegators = eligibleDelegates.filter(d => d.userId !== user?.userId);
+
   // Handlers
   const handleOpenCreateDialog = () => {
     setFormData({
+      delegatorUserId: null,  // null means current user (or selected manager for admins)
       delegateUserId: null,
       startDate: new Date().toISOString().split('T')[0],
       endDate: '',
@@ -290,6 +299,7 @@ export const DelegationSettings = ({ embedded = false }: DelegationSettingsProps
   const handleCloseCreateDialog = () => {
     setIsCreateDialogOpen(false);
     setFormData({
+      delegatorUserId: null,
       delegateUserId: null,
       startDate: '',
       endDate: '',
@@ -306,6 +316,7 @@ export const DelegationSettings = ({ embedded = false }: DelegationSettingsProps
     try {
       await create({
         delegateUserId: formData.delegateUserId,
+        delegatorUserId: formData.delegatorUserId || undefined,  // Only sent if admin creating on behalf of another
         startDate: formData.startDate,
         endDate: formData.endDate,
         reason: formData.reason || undefined,
@@ -551,6 +562,40 @@ export const DelegationSettings = ({ embedded = false }: DelegationSettingsProps
                 </MessageBar>
               )}
 
+              {/* TimesheetAdmins can create delegations on behalf of managers */}
+              {isAdmin && (
+                <Field
+                  label="Creating On Behalf Of"
+                  hint="Leave empty to create a delegation for yourself"
+                  className={styles.formField}
+                >
+                  <Dropdown
+                    placeholder="Select a manager (optional)"
+                    value={
+                      eligibleDelegators.find((d) => d.userId === formData.delegatorUserId)?.name || ''
+                    }
+                    onOptionSelect={(_, data) => {
+                      const userId = data.optionValue ? parseInt(data.optionValue, 10) : null;
+                      setFormData((prev) => ({
+                        ...prev,
+                        delegatorUserId: userId,
+                        employeeIds: [],  // Reset employee selection when delegator changes
+                      }));
+                    }}
+                    disabled={loadingDelegates}
+                  >
+                    <Option key="self" value="">
+                      Myself
+                    </Option>
+                    {eligibleDelegators.map((manager) => (
+                      <Option key={manager.userId} value={manager.userId.toString()}>
+                        {`${manager.name} (${manager.email})`}
+                      </Option>
+                    ))}
+                  </Dropdown>
+                </Field>
+              )}
+
               <Field label="Delegate To" required className={styles.formField}>
                 <Dropdown
                   placeholder="Select a user"
@@ -574,7 +619,8 @@ export const DelegationSettings = ({ embedded = false }: DelegationSettingsProps
                 </Dropdown>
               </Field>
 
-              {directReports.length > 0 && (
+              {/* Employee scoping - only shown when creating for self (not on behalf of another manager) */}
+              {directReports.length > 0 && !formData.delegatorUserId && (
                 <Field
                   label="Scope to Specific Employees (Optional)"
                   hint="Leave empty to delegate for all your direct reports"
@@ -600,6 +646,15 @@ export const DelegationSettings = ({ embedded = false }: DelegationSettingsProps
                     </Caption1>
                   )}
                 </Field>
+              )}
+              {/* Show note when admin is creating on behalf of another manager */}
+              {isAdmin && formData.delegatorUserId && (
+                <MessageBar intent="info" style={{ marginBottom: tokens.spacingVerticalM }}>
+                  <MessageBarBody>
+                    Employee scoping is not available when creating delegations on behalf of another manager.
+                    The delegation will apply to all of the manager's direct reports.
+                  </MessageBarBody>
+                </MessageBar>
               )}
 
               <Field label="Start Date" required className={styles.formField}>

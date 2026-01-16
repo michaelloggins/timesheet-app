@@ -28,6 +28,7 @@ import {
   Dropdown,
   Option,
   Input,
+  ToggleButton,
 } from '@fluentui/react-components';
 import {
   DocumentBulletList24Regular,
@@ -203,6 +204,43 @@ const useStyles = makeStyles({
     '@media (max-width: 768px)': {
       width: '100%',
     },
+  },
+  quickEntryLocationPills: {
+    display: 'flex',
+    alignItems: 'center',
+    backgroundColor: tokens.colorNeutralBackground3,
+    ...shorthands.borderRadius('9999px'),
+    ...shorthands.padding('2px'),
+  },
+  locationPillLeft: {
+    minWidth: 'auto',
+    ...shorthands.padding(tokens.spacingVerticalXS, tokens.spacingHorizontalM),
+    fontSize: tokens.fontSizeBase200,
+    height: '32px',
+    borderTopLeftRadius: '9999px',
+    borderBottomLeftRadius: '9999px',
+    borderTopRightRadius: '0',
+    borderBottomRightRadius: '0',
+    ...shorthands.border('none'),
+  },
+  locationPillCenter: {
+    minWidth: 'auto',
+    ...shorthands.padding(tokens.spacingVerticalXS, tokens.spacingHorizontalM),
+    fontSize: tokens.fontSizeBase200,
+    height: '32px',
+    ...shorthands.borderRadius('0'),
+    ...shorthands.border('none'),
+  },
+  locationPillRight: {
+    minWidth: 'auto',
+    ...shorthands.padding(tokens.spacingVerticalXS, tokens.spacingHorizontalM),
+    fontSize: tokens.fontSizeBase200,
+    height: '32px',
+    borderTopLeftRadius: '0',
+    borderBottomLeftRadius: '0',
+    borderTopRightRadius: '9999px',
+    borderBottomRightRadius: '9999px',
+    ...shorthands.border('none'),
   },
   totalHoursRow: {
     display: 'flex',
@@ -410,6 +448,7 @@ export const Dashboard = () => {
   const [quickEntryProject, setQuickEntryProject] = useState<string>('');
   const [quickEntryHours, setQuickEntryHours] = useState<string>('8');
   const [quickEntryDay, setQuickEntryDay] = useState<string>('');
+  const [quickEntryLocation, setQuickEntryLocation] = useState<'Office' | 'WFH' | 'Other'>('Office');
 
   // Low hours warning dialog state
   const [lowHoursDialogOpen, setLowHoursDialogOpen] = useState(false);
@@ -499,7 +538,7 @@ export const Dashboard = () => {
       projectId: parseInt(quickEntryProject),
       workDate: quickEntryDay,
       hoursWorked: hours,
-      workLocation: 'Office',
+      workLocation: quickEntryLocation,
     });
 
     // Reset hours for next entry
@@ -675,6 +714,35 @@ export const Dashboard = () => {
                 step={0.25}
                 contentAfter={<Text size={200}>hrs</Text>}
               />
+              <div className={styles.quickEntryLocationPills}>
+                <ToggleButton
+                  size="small"
+                  appearance={quickEntryLocation === 'Office' ? 'primary' : 'outline'}
+                  checked={quickEntryLocation === 'Office'}
+                  className={styles.locationPillLeft}
+                  onClick={() => setQuickEntryLocation('Office')}
+                >
+                  Office
+                </ToggleButton>
+                <ToggleButton
+                  size="small"
+                  appearance={quickEntryLocation === 'WFH' ? 'primary' : 'outline'}
+                  checked={quickEntryLocation === 'WFH'}
+                  className={styles.locationPillCenter}
+                  onClick={() => setQuickEntryLocation('WFH')}
+                >
+                  WFH
+                </ToggleButton>
+                <ToggleButton
+                  size="small"
+                  appearance={quickEntryLocation === 'Other' ? 'primary' : 'outline'}
+                  checked={quickEntryLocation === 'Other'}
+                  className={styles.locationPillRight}
+                  onClick={() => setQuickEntryLocation('Other')}
+                >
+                  Other
+                </ToggleButton>
+              </div>
               <Dropdown
                 className={styles.quickEntryDaySelect}
                 value={weekDates.find(d => formatDate(d) === quickEntryDay)?.toLocaleDateString('en-US', { weekday: 'short', month: 'numeric', day: 'numeric' }) || ''}

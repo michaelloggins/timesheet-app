@@ -148,6 +148,7 @@ export interface Delegation {
 
 export interface CreateDelegationRequest {
   delegateUserId: number;
+  delegatorUserId?: number;  // Optional: TimesheetAdmins can create delegations on behalf of managers
   startDate: string;
   endDate: string;
   reason?: string;

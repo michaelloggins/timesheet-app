@@ -62,11 +62,12 @@ export const getActiveDelegations = asyncHandler(async (req: Request, res: Respo
 /**
  * POST /api/delegations
  * Create a new delegation
+ * TimesheetAdmins can create delegations on behalf of any manager using delegatorUserId
  */
 export const createDelegation = asyncHandler(async (req: Request, res: Response) => {
   const user = req.user!;
   // Accept both delegateId and delegateUserId for compatibility
-  const { delegateId, delegateUserId, startDate, endDate, reason, employeeIds } = req.body;
+  const { delegateId, delegateUserId, delegatorUserId, startDate, endDate, reason, employeeIds } = req.body;
   const actualDelegateId = delegateId || delegateUserId;
 
   // Validate required fields
@@ -78,6 +79,16 @@ export const createDelegation = asyncHandler(async (req: Request, res: Response)
   }
   if (!endDate) {
     throw new AppError(400, 'End date is required');
+  }
+
+  // Determine the delegator:
+  // - TimesheetAdmins can create delegations on behalf of any manager
+  // - Regular users can only delegate their own authority
+  let actualDelegatorId = user.userId;
+  if (delegatorUserId && user.role === 'TimesheetAdmin') {
+    actualDelegatorId = parseInt(String(delegatorUserId), 10);
+  } else if (delegatorUserId && user.role !== 'TimesheetAdmin') {
+    throw new AppError(403, 'Only TimesheetAdmins can create delegations on behalf of others');
   }
 
   // Validate date formats
@@ -92,9 +103,8 @@ export const createDelegation = asyncHandler(async (req: Request, res: Response)
   }
 
   // Create the delegation
-  // The delegator is the current user (they are delegating their own authority)
   const delegation = await delegationService.createDelegation({
-    delegatorId: user.userId,
+    delegatorId: actualDelegatorId,
     delegateId: parseInt(actualDelegateId, 10),
     startDate: parsedStartDate,
     endDate: parsedEndDate,
