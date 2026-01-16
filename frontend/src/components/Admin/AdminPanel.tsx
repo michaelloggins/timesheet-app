@@ -87,10 +87,22 @@ const useStyles = makeStyles({
   tabContent: {
     marginTop: tokens.spacingVerticalM,
   },
+  tableWrapper: {
+    overflowX: 'auto',
+    WebkitOverflowScrolling: 'touch',
+  },
   tableContainer: {
     border: `1px solid ${tokens.colorNeutralStroke1}`,
     borderRadius: tokens.borderRadiusMedium,
     overflow: 'hidden',
+  },
+  table: {
+    minWidth: '700px',
+    tableLayout: 'fixed',
+  },
+  tableWide: {
+    minWidth: '900px',
+    tableLayout: 'fixed',
   },
   badge: {
     minWidth: '60px',
@@ -114,6 +126,14 @@ const useStyles = makeStyles({
     ':hover': {
       backgroundColor: tokens.colorNeutralBackground1Hover,
     },
+  },
+  cellTruncate: {
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  },
+  cellWrap: {
+    wordBreak: 'break-word',
   },
 });
 
@@ -302,74 +322,76 @@ export const AdminPanel = () => {
               <Spinner label="Loading projects..." />
             ) : (
               <div className={styles.tableContainer}>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHeaderCell>Project Number</TableHeaderCell>
-                      <TableHeaderCell>Project Name</TableHeaderCell>
-                      <TableHeaderCell>Department</TableHeaderCell>
-                      <TableHeaderCell>Type</TableHeaderCell>
-                      <TableHeaderCell>Grant ID</TableHeaderCell>
-                      <TableHeaderCell>Status</TableHeaderCell>
-                      <TableHeaderCell>Actions</TableHeaderCell>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {projects && projects.length > 0 ? (
-                      projects.map((project) => (
-                        <TableRow key={project.projectId}>
-                          <TableCell>{project.projectNumber}</TableCell>
-                          <TableCell>{project.projectName}</TableCell>
-                          <TableCell>{getDepartmentName(project.departmentId)}</TableCell>
-                          <TableCell>{project.projectType}</TableCell>
-                          <TableCell>{project.grantIdentifier || '-'}</TableCell>
-                          <TableCell>
-                            <Badge
-                              appearance="filled"
-                              color={project.isActive ? 'success' : 'danger'}
-                              className={styles.badge}
-                            >
-                              {project.isActive ? 'Active' : 'Inactive'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Menu>
-                              <MenuTrigger disableButtonEnhancement>
-                                <Button
-                                  appearance="subtle"
-                                  icon={<MoreVerticalRegular />}
-                                  aria-label="More actions"
-                                />
-                              </MenuTrigger>
-                              <MenuPopover>
-                                <MenuList>
-                                  <MenuItem
-                                    icon={<EditRegular />}
-                                    onClick={() => handleEditProject(project)}
-                                  >
-                                    Edit
-                                  </MenuItem>
-                                  <MenuItem
-                                    icon={<DeleteRegular />}
-                                    onClick={() => handleDeactivateProject(project.projectId)}
-                                  >
-                                    Deactivate
-                                  </MenuItem>
-                                </MenuList>
-                              </MenuPopover>
-                            </Menu>
+                <div className={styles.tableWrapper}>
+                  <Table className={styles.tableWide}>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHeaderCell style={{ width: '120px' }}>Project Number</TableHeaderCell>
+                        <TableHeaderCell style={{ width: '200px' }}>Project Name</TableHeaderCell>
+                        <TableHeaderCell style={{ width: '150px' }}>Department</TableHeaderCell>
+                        <TableHeaderCell style={{ width: '100px' }}>Type</TableHeaderCell>
+                        <TableHeaderCell style={{ width: '120px' }}>Grant ID</TableHeaderCell>
+                        <TableHeaderCell style={{ width: '80px' }}>Status</TableHeaderCell>
+                        <TableHeaderCell style={{ width: '70px' }}>Actions</TableHeaderCell>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {projects && projects.length > 0 ? (
+                        projects.map((project) => (
+                          <TableRow key={project.projectId}>
+                            <TableCell className={styles.cellTruncate}>{project.projectNumber}</TableCell>
+                            <TableCell className={styles.cellTruncate} title={project.projectName}>{project.projectName}</TableCell>
+                            <TableCell className={styles.cellTruncate}>{getDepartmentName(project.departmentId)}</TableCell>
+                            <TableCell>{project.projectType}</TableCell>
+                            <TableCell className={styles.cellTruncate}>{project.grantIdentifier || '-'}</TableCell>
+                            <TableCell>
+                              <Badge
+                                appearance="filled"
+                                color={project.isActive ? 'success' : 'danger'}
+                                className={styles.badge}
+                              >
+                                {project.isActive ? 'Active' : 'Inactive'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Menu>
+                                <MenuTrigger disableButtonEnhancement>
+                                  <Button
+                                    appearance="subtle"
+                                    icon={<MoreVerticalRegular />}
+                                    aria-label="More actions"
+                                  />
+                                </MenuTrigger>
+                                <MenuPopover>
+                                  <MenuList>
+                                    <MenuItem
+                                      icon={<EditRegular />}
+                                      onClick={() => handleEditProject(project)}
+                                    >
+                                      Edit
+                                    </MenuItem>
+                                    <MenuItem
+                                      icon={<DeleteRegular />}
+                                      onClick={() => handleDeactivateProject(project.projectId)}
+                                    >
+                                      Deactivate
+                                    </MenuItem>
+                                  </MenuList>
+                                </MenuPopover>
+                              </Menu>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={7} style={{ textAlign: 'center', padding: '2rem' }}>
+                            No projects found. Click "New Project" to create one.
                           </TableCell>
                         </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={7} style={{ textAlign: 'center', padding: '2rem' }}>
-                          No projects found. Click "New Project" to create one.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
             )}
 
@@ -413,66 +435,68 @@ export const AdminPanel = () => {
               <Spinner label="Loading departments..." />
             ) : (
               <div className={styles.tableContainer}>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHeaderCell>Code</TableHeaderCell>
-                      <TableHeaderCell>Department Name</TableHeaderCell>
-                      <TableHeaderCell>Users</TableHeaderCell>
-                      <TableHeaderCell>Projects</TableHeaderCell>
-                      <TableHeaderCell>Status</TableHeaderCell>
-                      <TableHeaderCell>Actions</TableHeaderCell>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {departments && departments.length > 0 ? (
-                      departments.map((department) => (
-                        <TableRow key={department.DepartmentID}>
-                          <TableCell>{department.DepartmentCode}</TableCell>
-                          <TableCell>{department.DepartmentName}</TableCell>
-                          <TableCell>{department.UserCount || 0}</TableCell>
-                          <TableCell>{department.ProjectCount || 0}</TableCell>
-                          <TableCell>
-                            <Badge
-                              appearance="filled"
-                              color={department.IsActive ? 'success' : 'danger'}
-                              className={styles.badge}
-                            >
-                              {department.IsActive ? 'Active' : 'Inactive'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Menu>
-                              <MenuTrigger disableButtonEnhancement>
-                                <Button
-                                  appearance="subtle"
-                                  icon={<MoreVerticalRegular />}
-                                  aria-label="More actions"
-                                />
-                              </MenuTrigger>
-                              <MenuPopover>
-                                <MenuList>
-                                  <MenuItem
-                                    icon={<EditRegular />}
-                                    onClick={() => handleEditDepartment(department)}
-                                  >
-                                    Edit
-                                  </MenuItem>
-                                </MenuList>
-                              </MenuPopover>
-                            </Menu>
+                <div className={styles.tableWrapper}>
+                  <Table className={styles.table}>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHeaderCell style={{ width: '100px' }}>Code</TableHeaderCell>
+                        <TableHeaderCell style={{ width: '250px' }}>Department Name</TableHeaderCell>
+                        <TableHeaderCell style={{ width: '80px' }}>Users</TableHeaderCell>
+                        <TableHeaderCell style={{ width: '80px' }}>Projects</TableHeaderCell>
+                        <TableHeaderCell style={{ width: '80px' }}>Status</TableHeaderCell>
+                        <TableHeaderCell style={{ width: '70px' }}>Actions</TableHeaderCell>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {departments && departments.length > 0 ? (
+                        departments.map((department) => (
+                          <TableRow key={department.DepartmentID}>
+                            <TableCell className={styles.cellTruncate}>{department.DepartmentCode}</TableCell>
+                            <TableCell className={styles.cellTruncate} title={department.DepartmentName}>{department.DepartmentName}</TableCell>
+                            <TableCell>{department.UserCount || 0}</TableCell>
+                            <TableCell>{department.ProjectCount || 0}</TableCell>
+                            <TableCell>
+                              <Badge
+                                appearance="filled"
+                                color={department.IsActive ? 'success' : 'danger'}
+                                className={styles.badge}
+                              >
+                                {department.IsActive ? 'Active' : 'Inactive'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Menu>
+                                <MenuTrigger disableButtonEnhancement>
+                                  <Button
+                                    appearance="subtle"
+                                    icon={<MoreVerticalRegular />}
+                                    aria-label="More actions"
+                                  />
+                                </MenuTrigger>
+                                <MenuPopover>
+                                  <MenuList>
+                                    <MenuItem
+                                      icon={<EditRegular />}
+                                      onClick={() => handleEditDepartment(department)}
+                                    >
+                                      Edit
+                                    </MenuItem>
+                                  </MenuList>
+                                </MenuPopover>
+                              </Menu>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={6} style={{ textAlign: 'center', padding: '2rem' }}>
+                            No departments found. Click "New Department" to create one.
                           </TableCell>
                         </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={6} style={{ textAlign: 'center', padding: '2rem' }}>
-                          No departments found. Click "New Department" to create one.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
             )}
 
@@ -515,67 +539,69 @@ export const AdminPanel = () => {
               <Spinner label="Loading holidays..." />
             ) : (
               <div className={styles.tableContainer}>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHeaderCell>Holiday Name</TableHeaderCell>
-                      <TableHeaderCell>Date</TableHeaderCell>
-                      <TableHeaderCell>Default Hours</TableHeaderCell>
-                      <TableHeaderCell>Actions</TableHeaderCell>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {holidays && holidays.length > 0 ? (
-                      holidays.map((holiday) => (
-                        <TableRow key={holiday.HolidayID}>
-                          <TableCell>{holiday.HolidayName}</TableCell>
-                          <TableCell>
-                            {new Date(holiday.HolidayDate).toLocaleDateString('en-US', {
-                              weekday: 'short',
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric',
-                            })}
-                          </TableCell>
-                          <TableCell>{holiday.DefaultHours} hrs</TableCell>
-                          <TableCell>
-                            <Menu>
-                              <MenuTrigger disableButtonEnhancement>
-                                <Button
-                                  appearance="subtle"
-                                  icon={<MoreVerticalRegular />}
-                                  aria-label="More actions"
-                                />
-                              </MenuTrigger>
-                              <MenuPopover>
-                                <MenuList>
-                                  <MenuItem
-                                    icon={<EditRegular />}
-                                    onClick={() => handleEditHoliday(holiday)}
-                                  >
-                                    Edit
-                                  </MenuItem>
-                                  <MenuItem
-                                    icon={<DeleteRegular />}
-                                    onClick={() => handleDeleteHoliday(holiday.HolidayID)}
-                                  >
-                                    Delete
-                                  </MenuItem>
-                                </MenuList>
-                              </MenuPopover>
-                            </Menu>
+                <div className={styles.tableWrapper}>
+                  <Table className={styles.table}>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHeaderCell style={{ width: '250px' }}>Holiday Name</TableHeaderCell>
+                        <TableHeaderCell style={{ width: '200px' }}>Date</TableHeaderCell>
+                        <TableHeaderCell style={{ width: '120px' }}>Default Hours</TableHeaderCell>
+                        <TableHeaderCell style={{ width: '70px' }}>Actions</TableHeaderCell>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {holidays && holidays.length > 0 ? (
+                        holidays.map((holiday) => (
+                          <TableRow key={holiday.HolidayID}>
+                            <TableCell className={styles.cellTruncate} title={holiday.HolidayName}>{holiday.HolidayName}</TableCell>
+                            <TableCell>
+                              {new Date(holiday.HolidayDate).toLocaleDateString('en-US', {
+                                weekday: 'short',
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                              })}
+                            </TableCell>
+                            <TableCell>{holiday.DefaultHours} hrs</TableCell>
+                            <TableCell>
+                              <Menu>
+                                <MenuTrigger disableButtonEnhancement>
+                                  <Button
+                                    appearance="subtle"
+                                    icon={<MoreVerticalRegular />}
+                                    aria-label="More actions"
+                                  />
+                                </MenuTrigger>
+                                <MenuPopover>
+                                  <MenuList>
+                                    <MenuItem
+                                      icon={<EditRegular />}
+                                      onClick={() => handleEditHoliday(holiday)}
+                                    >
+                                      Edit
+                                    </MenuItem>
+                                    <MenuItem
+                                      icon={<DeleteRegular />}
+                                      onClick={() => handleDeleteHoliday(holiday.HolidayID)}
+                                    >
+                                      Delete
+                                    </MenuItem>
+                                  </MenuList>
+                                </MenuPopover>
+                              </Menu>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={4} style={{ textAlign: 'center', padding: '2rem' }}>
+                            No holidays configured. Click "New Holiday" to add company holidays.
                           </TableCell>
                         </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={4} style={{ textAlign: 'center', padding: '2rem' }}>
-                          No holidays configured. Click "New Holiday" to add company holidays.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
             )}
 
@@ -645,75 +671,77 @@ export const AdminPanel = () => {
               <Spinner label="Loading users..." />
             ) : (
               <div className={styles.tableContainer}>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHeaderCell>Name</TableHeaderCell>
-                      <TableHeaderCell>Email</TableHeaderCell>
-                      <TableHeaderCell>Department</TableHeaderCell>
-                      <TableHeaderCell>Role</TableHeaderCell>
-                      <TableHeaderCell>Manager</TableHeaderCell>
-                      <TableHeaderCell>Status</TableHeaderCell>
-                      <TableHeaderCell>Last Login</TableHeaderCell>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {users && users.length > 0 ? (
-                      users.map((user) => (
-                        <TableRow
-                          key={user.UserID}
-                          className={styles.clickableRow}
-                          onClick={() => setSelectedUser(user)}
-                        >
-                          <TableCell>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <PersonRegular />
-                              {user.Name}
-                            </div>
-                          </TableCell>
-                          <TableCell>{user.Email}</TableCell>
-                          <TableCell>{user.DepartmentName || '-'}</TableCell>
-                          <TableCell>
-                            <Badge
-                              appearance="filled"
-                              color={
-                                user.Role === 'TimesheetAdmin' ? 'danger' :
-                                user.Role === 'Manager' ? 'warning' :
-                                user.Role === 'Leadership' ? 'important' : 'informative'
-                              }
-                              className={styles.badge}
-                            >
-                              {user.Role}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{user.ManagerName || '-'}</TableCell>
-                          <TableCell>
-                            {user.IsActive ? (
-                              <Badge appearance="filled" color="success" icon={<CheckmarkCircleRegular />}>
-                                Active
+                <div className={styles.tableWrapper}>
+                  <Table className={styles.tableWide}>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHeaderCell style={{ width: '180px' }}>Name</TableHeaderCell>
+                        <TableHeaderCell style={{ width: '220px' }}>Email</TableHeaderCell>
+                        <TableHeaderCell style={{ width: '140px' }}>Department</TableHeaderCell>
+                        <TableHeaderCell style={{ width: '110px' }}>Role</TableHeaderCell>
+                        <TableHeaderCell style={{ width: '140px' }}>Manager</TableHeaderCell>
+                        <TableHeaderCell style={{ width: '80px' }}>Status</TableHeaderCell>
+                        <TableHeaderCell style={{ width: '100px' }}>Last Login</TableHeaderCell>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {users && users.length > 0 ? (
+                        users.map((user) => (
+                          <TableRow
+                            key={user.UserID}
+                            className={styles.clickableRow}
+                            onClick={() => setSelectedUser(user)}
+                          >
+                            <TableCell className={styles.cellTruncate} title={user.Name}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                                <PersonRegular style={{ flexShrink: 0 }} />
+                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.Name}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className={styles.cellTruncate} title={user.Email}>{user.Email}</TableCell>
+                            <TableCell className={styles.cellTruncate} title={user.DepartmentName || '-'}>{user.DepartmentName || '-'}</TableCell>
+                            <TableCell>
+                              <Badge
+                                appearance="filled"
+                                color={
+                                  user.Role === 'TimesheetAdmin' ? 'danger' :
+                                  user.Role === 'Manager' ? 'warning' :
+                                  user.Role === 'Leadership' ? 'important' : 'informative'
+                                }
+                                className={styles.badge}
+                              >
+                                {user.Role}
                               </Badge>
-                            ) : (
-                              <Badge appearance="filled" color="danger" icon={<DismissCircleRegular />}>
-                                Inactive
-                              </Badge>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {user.LastLoginDate
-                              ? new Date(user.LastLoginDate).toLocaleDateString()
-                              : 'Never'}
+                            </TableCell>
+                            <TableCell className={styles.cellTruncate} title={user.ManagerName || '-'}>{user.ManagerName || '-'}</TableCell>
+                            <TableCell>
+                              {user.IsActive ? (
+                                <Badge appearance="filled" color="success" icon={<CheckmarkCircleRegular />}>
+                                  Active
+                                </Badge>
+                              ) : (
+                                <Badge appearance="filled" color="danger" icon={<DismissCircleRegular />}>
+                                  Inactive
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {user.LastLoginDate
+                                ? new Date(user.LastLoginDate).toLocaleDateString()
+                                : 'Never'}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={7} style={{ textAlign: 'center', padding: '2rem' }}>
+                            No users found. Click "Sync from Entra ID" to import users from security groups.
                           </TableCell>
                         </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={7} style={{ textAlign: 'center', padding: '2rem' }}>
-                          No users found. Click "Sync from Entra ID" to import users from security groups.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
             )}
           </>
@@ -779,75 +807,77 @@ export const AdminPanel = () => {
               <Spinner label="Loading audit logs..." />
             ) : (
               <div className={styles.tableContainer}>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHeaderCell>Date & Time</TableHeaderCell>
-                      <TableHeaderCell>Action</TableHeaderCell>
-                      <TableHeaderCell>Performed By</TableHeaderCell>
-                      <TableHeaderCell>Timesheet Owner</TableHeaderCell>
-                      <TableHeaderCell>Period</TableHeaderCell>
-                      <TableHeaderCell>Notes</TableHeaderCell>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {auditLogs && auditLogs.length > 0 ? (
-                      auditLogs.map((log) => {
-                        const actionInfo = getActionInfo(log.action);
-                        return (
-                          <TableRow key={log.historyId}>
-                            <TableCell>
-                              {new Date(log.actionDate).toLocaleDateString()}{' '}
-                              {new Date(log.actionDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </TableCell>
-                            <TableCell>
-                              <Badge
-                                appearance="filled"
-                                color={actionInfo.color}
-                                className={styles.badge}
-                              >
-                                {actionInfo.label}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              {log.actionBy.name}
-                            </TableCell>
-                            <TableCell>
-                              {log.timesheetOwner?.name || '-'}
-                            </TableCell>
-                            <TableCell>
-                              {log.periodStartDate && log.periodEndDate ? (
-                                <span>
-                                  {parseLocalDate(log.periodStartDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                                  {' - '}
-                                  {parseLocalDate(log.periodEndDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                                </span>
-                              ) : '-'}
-                            </TableCell>
-                            <TableCell>
-                              {log.notes ? (
-                                <Popover>
-                                  <PopoverTrigger disableButtonEnhancement>
-                                    <Link>See Notes</Link>
-                                  </PopoverTrigger>
-                                  <PopoverSurface style={{ maxWidth: '300px' }}>
-                                    {log.notes}
-                                  </PopoverSurface>
-                                </Popover>
-                              ) : '-'}
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })
-                    ) : (
+                <div className={styles.tableWrapper}>
+                  <Table className={styles.tableWide}>
+                    <TableHeader>
                       <TableRow>
-                        <TableCell colSpan={6} style={{ textAlign: 'center', padding: '2rem' }}>
-                          No audit logs found for the selected filters.
-                        </TableCell>
+                        <TableHeaderCell style={{ width: '150px' }}>Date & Time</TableHeaderCell>
+                        <TableHeaderCell style={{ width: '100px' }}>Action</TableHeaderCell>
+                        <TableHeaderCell style={{ width: '160px' }}>Performed By</TableHeaderCell>
+                        <TableHeaderCell style={{ width: '160px' }}>Timesheet Owner</TableHeaderCell>
+                        <TableHeaderCell style={{ width: '130px' }}>Period</TableHeaderCell>
+                        <TableHeaderCell style={{ width: '90px' }}>Notes</TableHeaderCell>
                       </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {auditLogs && auditLogs.length > 0 ? (
+                        auditLogs.map((log) => {
+                          const actionInfo = getActionInfo(log.action);
+                          return (
+                            <TableRow key={log.historyId}>
+                              <TableCell>
+                                {new Date(log.actionDate).toLocaleDateString()}{' '}
+                                {new Date(log.actionDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </TableCell>
+                              <TableCell>
+                                <Badge
+                                  appearance="filled"
+                                  color={actionInfo.color}
+                                  className={styles.badge}
+                                >
+                                  {actionInfo.label}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className={styles.cellTruncate} title={log.actionBy.name}>
+                                {log.actionBy.name}
+                              </TableCell>
+                              <TableCell className={styles.cellTruncate} title={log.timesheetOwner?.name || '-'}>
+                                {log.timesheetOwner?.name || '-'}
+                              </TableCell>
+                              <TableCell>
+                                {log.periodStartDate && log.periodEndDate ? (
+                                  <span>
+                                    {parseLocalDate(log.periodStartDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                    {' - '}
+                                    {parseLocalDate(log.periodEndDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                  </span>
+                                ) : '-'}
+                              </TableCell>
+                              <TableCell>
+                                {log.notes ? (
+                                  <Popover>
+                                    <PopoverTrigger disableButtonEnhancement>
+                                      <Link>See Notes</Link>
+                                    </PopoverTrigger>
+                                    <PopoverSurface style={{ maxWidth: '300px' }}>
+                                      {log.notes}
+                                    </PopoverSurface>
+                                  </Popover>
+                                ) : '-'}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={6} style={{ textAlign: 'center', padding: '2rem' }}>
+                            No audit logs found for the selected filters.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
             )}
           </>
