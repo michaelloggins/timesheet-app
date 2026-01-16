@@ -388,10 +388,31 @@ const useStyles = makeStyles({
     ...shorthands.borderColor('transparent'),
     transitionProperty: 'all',
     transitionDuration: '150ms',
+    position: 'relative',
+    overflow: 'hidden',
     ':hover': {
       backgroundColor: '#e8f5e3',
       ...shorthands.borderColor('#85b43b'),
     },
+  },
+  leaderboardBar: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    opacity: 0.15,
+    transitionProperty: 'width',
+    transitionDuration: '500ms',
+    transitionTimingFunction: 'ease-out',
+    zIndex: 0,
+  },
+  leaderboardContent: {
+    display: 'flex',
+    alignItems: 'center',
+    ...shorthands.gap(tokens.spacingHorizontalM),
+    width: '100%',
+    position: 'relative',
+    zIndex: 1,
   },
   leaderboardItemTop3: {
     background: 'linear-gradient(135deg, #fff9e6 0%, #fff3cd 100%)',
@@ -995,48 +1016,62 @@ export const Dashboard = () => {
                 const isTop3 = effectiveRank <= 3;
                 const rankColors = getRankColors(effectiveRank);
 
+                // Score is typically 0-100, use it as percentage for bar width
+                const scorePercent = Math.min(entry.overallScore, 100);
+                const barColor = scorePercent >= 90 ? '#286f1f' : scorePercent >= 70 ? '#b8860b' : '#c41e3a';
+
                 return (
                   <div
                     key={entry.userId}
                     className={`${styles.leaderboardItem} ${isTop3 ? styles.leaderboardItemTop3 : ''}`}
                   >
+                    {/* Background bar */}
                     <div
-                      className={styles.rankBadge}
+                      className={styles.leaderboardBar}
                       style={{
-                        backgroundColor: rankColors.bg,
-                        color: rankColors.color,
-                        boxShadow: rankColors.shadow,
+                        width: `${scorePercent}%`,
+                        backgroundColor: barColor,
                       }}
-                    >
-                      <span style={{ fontSize: isTop3 ? '16px' : '18px', fontWeight: 'bold' }}>{getRankLabel(effectiveRank)}</span>
-                    </div>
-
-                    <div className={styles.employeeInfo}>
-                      <Body1Strong
-                        style={{ cursor: 'pointer', textDecoration: 'underline', textDecorationColor: 'transparent' }}
-                        onClick={(e: React.MouseEvent) => {
-                          e.stopPropagation();
-                          navigate('/reports', { state: { userId: entry.userId.toString(), viewMode: 'byEmployee' } });
+                    />
+                    <div className={styles.leaderboardContent}>
+                      <div
+                        className={styles.rankBadge}
+                        style={{
+                          backgroundColor: rankColors.bg,
+                          color: rankColors.color,
+                          boxShadow: rankColors.shadow,
                         }}
-                        onMouseOver={(e: React.MouseEvent<HTMLElement>) => (e.currentTarget.style.textDecorationColor = '#286f1f')}
-                        onMouseOut={(e: React.MouseEvent<HTMLElement>) => (e.currentTarget.style.textDecorationColor = 'transparent')}
                       >
-                        {entry.employeeName}
-                      </Body1Strong>
-                      <Caption1>
-                        Weekly: {entry.weeklyComplianceRate.toFixed(0)}% | Daily: {entry.dailyReportingRate.toFixed(0)}%
-                      </Caption1>
-                    </div>
+                        <span style={{ fontSize: isTop3 ? '16px' : '18px', fontWeight: 'bold' }}>{getRankLabel(effectiveRank)}</span>
+                      </div>
 
-                    <div className={styles.scoreSection}>
-                      {streakInfo && (
-                        <div className={styles.streakBadge}>
-                          <Fire20Regular />
-                          <span>{entry.streakWeeks}w</span>
+                      <div className={styles.employeeInfo}>
+                        <Body1Strong
+                          style={{ cursor: 'pointer', textDecoration: 'underline', textDecorationColor: 'transparent' }}
+                          onClick={(e: React.MouseEvent) => {
+                            e.stopPropagation();
+                            navigate('/reports', { state: { userId: entry.userId.toString(), viewMode: 'byEmployee' } });
+                          }}
+                          onMouseOver={(e: React.MouseEvent<HTMLElement>) => (e.currentTarget.style.textDecorationColor = '#286f1f')}
+                          onMouseOut={(e: React.MouseEvent<HTMLElement>) => (e.currentTarget.style.textDecorationColor = 'transparent')}
+                        >
+                          {entry.employeeName}
+                        </Body1Strong>
+                        <Caption1>
+                          Weekly: {entry.weeklyComplianceRate.toFixed(0)}% | Daily: {entry.dailyReportingRate.toFixed(0)}%
+                        </Caption1>
+                      </div>
+
+                      <div className={styles.scoreSection}>
+                        {streakInfo && (
+                          <div className={styles.streakBadge}>
+                            <Fire20Regular />
+                            <span>{entry.streakWeeks}w</span>
+                          </div>
+                        )}
+                        <div className={styles.scoreValue}>
+                          {entry.overallScore.toFixed(0)}
                         </div>
-                      )}
-                      <div className={styles.scoreValue}>
-                        {entry.overallScore.toFixed(0)}
                       </div>
                     </div>
                   </div>
