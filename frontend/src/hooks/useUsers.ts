@@ -48,6 +48,16 @@ export interface DepartmentSyncDetail {
   code: string;
 }
 
+export interface DepartmentUpdateDetail {
+  name: string;
+  code: string;
+  changes: {
+    field: string;
+    from: string | null;
+    to: string | null;
+  }[];
+}
+
 export interface SyncResult {
   created: number;
   updated: number;
@@ -61,7 +71,7 @@ export interface SyncResult {
   updatedUsers: UserUpdateDetail[];
   deactivatedUsers: UserSyncDetail[];
   createdDepartments: DepartmentSyncDetail[];
-  updatedDepartments: DepartmentSyncDetail[];
+  updatedDepartments: DepartmentUpdateDetail[];
 }
 
 // Fetch all users

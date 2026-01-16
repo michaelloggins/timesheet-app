@@ -1279,12 +1279,20 @@ export const AdminPanel = () => {
                             <PopoverTrigger disableButtonEnhancement>
                               <Link className={styles.syncResultValue} style={{ cursor: 'pointer' }}>{syncUsers.data.departmentsUpdated}</Link>
                             </PopoverTrigger>
-                            <PopoverSurface style={{ maxWidth: '300px' }}>
+                            <PopoverSurface style={{ maxWidth: '400px', maxHeight: '300px', overflow: 'auto' }}>
                               <Body1Strong style={{ display: 'block', marginBottom: tokens.spacingVerticalS }}>Updated Departments</Body1Strong>
                               {syncUsers.data.updatedDepartments?.map((dept, idx) => (
-                                <div key={idx} style={{ marginBottom: tokens.spacingVerticalXS }}>
-                                  <span style={{ fontWeight: 600 }}>{dept.name}</span>
-                                  <Caption1 style={{ marginLeft: tokens.spacingHorizontalS }}>({dept.code})</Caption1>
+                                <div key={idx} style={{ marginBottom: tokens.spacingVerticalS, paddingBottom: tokens.spacingVerticalS, borderBottom: idx < syncUsers.data.updatedDepartments.length - 1 ? `1px solid ${tokens.colorNeutralStroke2}` : 'none' }}>
+                                  <div style={{ fontWeight: 600 }}>{dept.name}</div>
+                                  <Caption1 style={{ display: 'block', marginBottom: tokens.spacingVerticalXS }}>Code: {dept.code}</Caption1>
+                                  {dept.changes?.map((change, cidx) => (
+                                    <div key={cidx} style={{ fontSize: '12px', marginLeft: tokens.spacingHorizontalS }}>
+                                      <span style={{ color: tokens.colorNeutralForeground3 }}>{change.field}:</span>{' '}
+                                      <span style={{ textDecoration: 'line-through', color: tokens.colorPaletteRedForeground1 }}>{change.from || '(none)'}</span>
+                                      {' → '}
+                                      <span style={{ color: tokens.colorPaletteGreenForeground1 }}>{change.to || '(none)'}</span>
+                                    </div>
+                                  ))}
                                 </div>
                               ))}
                             </PopoverSurface>

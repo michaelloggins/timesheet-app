@@ -47,6 +47,16 @@ interface DepartmentSyncDetail {
   code: string;
 }
 
+interface DepartmentUpdateDetail {
+  name: string;
+  code: string;
+  changes: {
+    field: string;
+    from: string | null;
+    to: string | null;
+  }[];
+}
+
 interface SyncResult {
   created: number;
   updated: number;
@@ -60,7 +70,7 @@ interface SyncResult {
   updatedUsers: UserUpdateDetail[];
   deactivatedUsers: UserSyncDetail[];
   createdDepartments: DepartmentSyncDetail[];
-  updatedDepartments: DepartmentSyncDetail[];
+  updatedDepartments: DepartmentUpdateDetail[];
 }
 
 interface DepartmentConflict {
@@ -206,14 +216,14 @@ class UserSyncService {
     updated: number;
     errors: string[];
     createdDepartments: DepartmentSyncDetail[];
-    updatedDepartments: DepartmentSyncDetail[];
+    updatedDepartments: DepartmentUpdateDetail[];
   }> {
     const result = {
       created: 0,
       updated: 0,
       errors: [] as string[],
       createdDepartments: [] as DepartmentSyncDetail[],
-      updatedDepartments: [] as DepartmentSyncDetail[],
+      updatedDepartments: [] as DepartmentUpdateDetail[],
     };
     const pool = getPool();
 
@@ -229,18 +239,33 @@ class UserSyncService {
           // Get group owners
           const ownerIds = await this.getGroupOwners(group.id);
 
-          // Check if department exists (by Entra Group ID)
+          // Check if department exists (by Entra Group ID) - get full details for change tracking
           const existing = await pool.request()
             .input('entraGroupId', group.id)
-            .query('SELECT DepartmentID FROM Departments WHERE EntraGroupID = @entraGroupId');
+            .query('SELECT DepartmentID, DepartmentName, DepartmentCode, OwnerEntraIDs FROM Departments WHERE EntraGroupID = @entraGroupId');
 
           if (existing.recordset.length > 0) {
+            const oldDept = existing.recordset[0];
+            const newOwners = JSON.stringify(ownerIds);
+
+            // Track changes
+            const changes: { field: string; from: string | null; to: string | null }[] = [];
+            if (oldDept.DepartmentName !== deptName) {
+              changes.push({ field: 'Name', from: oldDept.DepartmentName, to: deptName });
+            }
+            if (oldDept.DepartmentCode !== deptCode) {
+              changes.push({ field: 'Code', from: oldDept.DepartmentCode, to: deptCode });
+            }
+            if (oldDept.OwnerEntraIDs !== newOwners) {
+              changes.push({ field: 'Owners', from: oldDept.OwnerEntraIDs ? 'Set' : 'None', to: ownerIds.length > 0 ? `${ownerIds.length} owner(s)` : 'None' });
+            }
+
             // Update existing
             await pool.request()
-              .input('id', existing.recordset[0].DepartmentID)
+              .input('id', oldDept.DepartmentID)
               .input('name', deptName)
               .input('code', deptCode || deptName.substring(0, 20))
-              .input('owners', JSON.stringify(ownerIds))
+              .input('owners', newOwners)
               .query(`
                 UPDATE Departments
                 SET DepartmentName = @name,
@@ -249,8 +274,12 @@ class UserSyncService {
                     ModifiedDate = GETUTCDATE()
                 WHERE DepartmentID = @id
               `);
-            result.updated++;
-            result.updatedDepartments.push({ name: deptName, code: deptCode });
+
+            // Only count as updated if there were actual changes
+            if (changes.length > 0) {
+              result.updated++;
+              result.updatedDepartments.push({ name: deptName, code: deptCode, changes });
+            }
           } else {
             // Create new
             await pool.request()
