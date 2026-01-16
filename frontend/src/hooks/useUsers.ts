@@ -26,6 +26,28 @@ export interface User {
   DeactivationReason?: string;
 }
 
+export interface UserSyncDetail {
+  name: string;
+  email: string;
+  role: string;
+  department?: string;
+}
+
+export interface UserUpdateDetail {
+  name: string;
+  email: string;
+  changes: {
+    field: string;
+    from: string | null;
+    to: string | null;
+  }[];
+}
+
+export interface DepartmentSyncDetail {
+  name: string;
+  code: string;
+}
+
 export interface SyncResult {
   created: number;
   updated: number;
@@ -34,6 +56,12 @@ export interface SyncResult {
   departmentsUpdated: number;
   conflicts: string[];
   errors: string[];
+  // Detailed info
+  createdUsers: UserSyncDetail[];
+  updatedUsers: UserUpdateDetail[];
+  deactivatedUsers: UserSyncDetail[];
+  createdDepartments: DepartmentSyncDetail[];
+  updatedDepartments: DepartmentSyncDetail[];
 }
 
 // Fetch all users

@@ -25,6 +25,28 @@ interface EntraGroup {
   description?: string;
 }
 
+interface UserSyncDetail {
+  name: string;
+  email: string;
+  role: string;
+  department?: string;
+}
+
+interface UserUpdateDetail {
+  name: string;
+  email: string;
+  changes: {
+    field: string;
+    from: string | null;
+    to: string | null;
+  }[];
+}
+
+interface DepartmentSyncDetail {
+  name: string;
+  code: string;
+}
+
 interface SyncResult {
   created: number;
   updated: number;
@@ -33,6 +55,12 @@ interface SyncResult {
   departmentsUpdated: number;
   conflicts: string[];
   errors: string[];
+  // Detailed info
+  createdUsers: UserSyncDetail[];
+  updatedUsers: UserUpdateDetail[];
+  deactivatedUsers: UserSyncDetail[];
+  createdDepartments: DepartmentSyncDetail[];
+  updatedDepartments: DepartmentSyncDetail[];
 }
 
 interface DepartmentConflict {
@@ -173,8 +201,20 @@ class UserSyncService {
   /**
    * Sync departments from Entra ID groups
    */
-  async syncDepartmentsFromGroups(): Promise<{ created: number; updated: number; errors: string[] }> {
-    const result = { created: 0, updated: 0, errors: [] as string[] };
+  async syncDepartmentsFromGroups(): Promise<{
+    created: number;
+    updated: number;
+    errors: string[];
+    createdDepartments: DepartmentSyncDetail[];
+    updatedDepartments: DepartmentSyncDetail[];
+  }> {
+    const result = {
+      created: 0,
+      updated: 0,
+      errors: [] as string[],
+      createdDepartments: [] as DepartmentSyncDetail[],
+      updatedDepartments: [] as DepartmentSyncDetail[],
+    };
     const pool = getPool();
 
     try {
@@ -210,6 +250,7 @@ class UserSyncService {
                 WHERE DepartmentID = @id
               `);
             result.updated++;
+            result.updatedDepartments.push({ name: deptName, code: deptCode });
           } else {
             // Create new
             await pool.request()
@@ -222,6 +263,7 @@ class UserSyncService {
                 VALUES (@entraGroupId, @name, @code, @owners, 1)
               `);
             result.created++;
+            result.createdDepartments.push({ name: deptName, code: deptCode });
             logger.info(`Created department: ${deptName}`);
           }
         } catch (error: any) {
@@ -336,6 +378,11 @@ class UserSyncService {
       departmentsUpdated: 0,
       conflicts: [],
       errors: [],
+      createdUsers: [],
+      updatedUsers: [],
+      deactivatedUsers: [],
+      createdDepartments: [],
+      updatedDepartments: [],
     };
 
     const pool = getPool();
@@ -345,6 +392,8 @@ class UserSyncService {
     const deptResult = await this.syncDepartmentsFromGroups();
     result.departmentsCreated = deptResult.created;
     result.departmentsUpdated = deptResult.updated;
+    result.createdDepartments = deptResult.createdDepartments;
+    result.updatedDepartments = deptResult.updatedDepartments;
     result.errors.push(...deptResult.errors);
 
     // Build department group map
@@ -430,15 +479,31 @@ class UserSyncService {
           }
         }
 
-        // Check if user exists
+        // Check if user exists - get full details for change tracking
         const existing = await pool.request()
           .input('entraId', entraId)
-          .query('SELECT UserID, IsActive FROM Users WHERE EntraIDObjectID = @entraId');
+          .query(`
+            SELECT u.UserID, u.IsActive, u.Email, u.Name, u.Title, u.Role, u.DepartmentID, d.DepartmentName
+            FROM Users u
+            LEFT JOIN Departments d ON u.DepartmentID = d.DepartmentID
+            WHERE u.EntraIDObjectID = @entraId
+          `);
 
         const email = user.mail || user.userPrincipalName;
+        const newDeptName = departmentId ? (departmentGroups.get([...departmentGroups.entries()].find(([, v]) => v.departmentId === departmentId)?.[0] || '')?. name || null) : null;
 
         if (existing.recordset.length > 0) {
-          const wasDeactivated = !existing.recordset[0].IsActive;
+          const oldUser = existing.recordset[0];
+          const wasDeactivated = !oldUser.IsActive;
+
+          // Track changes
+          const changes: { field: string; from: string | null; to: string | null }[] = [];
+          if (oldUser.Email !== email) changes.push({ field: 'Email', from: oldUser.Email, to: email });
+          if (oldUser.Name !== user.displayName) changes.push({ field: 'Name', from: oldUser.Name, to: user.displayName });
+          if (oldUser.Title !== (user.jobTitle || null)) changes.push({ field: 'Title', from: oldUser.Title, to: user.jobTitle || null });
+          if (oldUser.Role !== role) changes.push({ field: 'Role', from: oldUser.Role, to: role });
+          if (oldUser.DepartmentID !== departmentId) changes.push({ field: 'Department', from: oldUser.DepartmentName, to: newDeptName });
+          if (wasDeactivated) changes.push({ field: 'Status', from: 'Inactive', to: 'Active' });
 
           await pool.request()
             .input('entraId', entraId)
@@ -467,7 +532,16 @@ class UserSyncService {
           if (wasDeactivated) {
             logger.info(`Reactivated user ${user.displayName}`);
           }
-          result.updated++;
+
+          // Only count as updated if there were actual changes
+          if (changes.length > 0) {
+            result.updated++;
+            result.updatedUsers.push({
+              name: user.displayName,
+              email,
+              changes,
+            });
+          }
         } else {
           await pool.request()
             .input('entraId', entraId)
@@ -484,6 +558,12 @@ class UserSyncService {
             `);
 
           result.created++;
+          result.createdUsers.push({
+            name: user.displayName,
+            email,
+            role,
+            department: newDeptName || undefined,
+          });
           logger.info(`Created user ${user.displayName}`);
         }
       } catch (error: any) {
@@ -501,12 +581,17 @@ class UserSyncService {
     if (process.env.ENTRA_SYNC_DEACTIVATE === 'true') {
       try {
         const allUsers = await pool.request()
-          .query('SELECT EntraIDObjectID, Name FROM Users WHERE IsActive = 1');
+          .query(`
+            SELECT u.EntraIDObjectID, u.Name, u.Email, u.Role, d.DepartmentName
+            FROM Users u
+            LEFT JOIN Departments d ON u.DepartmentID = d.DepartmentID
+            WHERE u.IsActive = 1
+          `);
 
-        for (const user of allUsers.recordset) {
-          if (!seenEntraIds.has(user.EntraIDObjectID)) {
+        for (const dbUser of allUsers.recordset) {
+          if (!seenEntraIds.has(dbUser.EntraIDObjectID)) {
             await pool.request()
-              .input('entraId', user.EntraIDObjectID)
+              .input('entraId', dbUser.EntraIDObjectID)
               .query(`
                 UPDATE Users
                 SET IsActive = 0,
@@ -514,8 +599,14 @@ class UserSyncService {
                     DeactivationReason = 'Removed from all Entra ID security groups'
                 WHERE EntraIDObjectID = @entraId
               `);
-            logger.info(`Deactivated user ${user.Name}`);
+            logger.info(`Deactivated user ${dbUser.Name}`);
             result.deactivated++;
+            result.deactivatedUsers.push({
+              name: dbUser.Name,
+              email: dbUser.Email,
+              role: dbUser.Role,
+              department: dbUser.DepartmentName || undefined,
+            });
           }
         }
       } catch (error: any) {

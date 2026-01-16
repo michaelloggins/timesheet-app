@@ -1153,7 +1153,25 @@ export const AdminPanel = () => {
                         <PersonAddRegular style={{ color: tokens.colorPaletteGreenForeground1 }} />
                       </div>
                       <div>
-                        <div className={styles.syncResultValue}>{syncUsers.data.created}</div>
+                        {syncUsers.data.created > 0 ? (
+                          <Popover>
+                            <PopoverTrigger disableButtonEnhancement>
+                              <Link className={styles.syncResultValue} style={{ cursor: 'pointer' }}>{syncUsers.data.created}</Link>
+                            </PopoverTrigger>
+                            <PopoverSurface style={{ maxWidth: '350px', maxHeight: '300px', overflow: 'auto' }}>
+                              <Body1Strong style={{ display: 'block', marginBottom: tokens.spacingVerticalS }}>Created Users</Body1Strong>
+                              {syncUsers.data.createdUsers?.map((user, idx) => (
+                                <div key={idx} style={{ marginBottom: tokens.spacingVerticalS, paddingBottom: tokens.spacingVerticalS, borderBottom: idx < syncUsers.data.createdUsers.length - 1 ? `1px solid ${tokens.colorNeutralStroke2}` : 'none' }}>
+                                  <div style={{ fontWeight: 600 }}>{user.name}</div>
+                                  <Caption1 style={{ display: 'block' }}>{user.email}</Caption1>
+                                  <Caption1 style={{ display: 'block' }}>Role: {user.role}{user.department ? ` • Dept: ${user.department}` : ''}</Caption1>
+                                </div>
+                              ))}
+                            </PopoverSurface>
+                          </Popover>
+                        ) : (
+                          <div className={styles.syncResultValue}>{syncUsers.data.created}</div>
+                        )}
                         <div className={styles.syncResultLabel}>Created</div>
                       </div>
                     </div>
@@ -1162,7 +1180,32 @@ export const AdminPanel = () => {
                         <PersonEditRegular style={{ color: tokens.colorPaletteBlueForeground2 }} />
                       </div>
                       <div>
-                        <div className={styles.syncResultValue}>{syncUsers.data.updated}</div>
+                        {syncUsers.data.updated > 0 ? (
+                          <Popover>
+                            <PopoverTrigger disableButtonEnhancement>
+                              <Link className={styles.syncResultValue} style={{ cursor: 'pointer' }}>{syncUsers.data.updated}</Link>
+                            </PopoverTrigger>
+                            <PopoverSurface style={{ maxWidth: '400px', maxHeight: '300px', overflow: 'auto' }}>
+                              <Body1Strong style={{ display: 'block', marginBottom: tokens.spacingVerticalS }}>Updated Users</Body1Strong>
+                              {syncUsers.data.updatedUsers?.map((user, idx) => (
+                                <div key={idx} style={{ marginBottom: tokens.spacingVerticalS, paddingBottom: tokens.spacingVerticalS, borderBottom: idx < syncUsers.data.updatedUsers.length - 1 ? `1px solid ${tokens.colorNeutralStroke2}` : 'none' }}>
+                                  <div style={{ fontWeight: 600 }}>{user.name}</div>
+                                  <Caption1 style={{ display: 'block', marginBottom: tokens.spacingVerticalXS }}>{user.email}</Caption1>
+                                  {user.changes.map((change, cidx) => (
+                                    <div key={cidx} style={{ fontSize: '12px', marginLeft: tokens.spacingHorizontalS }}>
+                                      <span style={{ color: tokens.colorNeutralForeground3 }}>{change.field}:</span>{' '}
+                                      <span style={{ textDecoration: 'line-through', color: tokens.colorPaletteRedForeground1 }}>{change.from || '(none)'}</span>
+                                      {' → '}
+                                      <span style={{ color: tokens.colorPaletteGreenForeground1 }}>{change.to || '(none)'}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              ))}
+                            </PopoverSurface>
+                          </Popover>
+                        ) : (
+                          <div className={styles.syncResultValue}>{syncUsers.data.updated}</div>
+                        )}
                         <div className={styles.syncResultLabel}>Updated</div>
                       </div>
                     </div>
@@ -1171,7 +1214,25 @@ export const AdminPanel = () => {
                         <PersonDeleteRegular style={{ color: tokens.colorPaletteRedForeground1 }} />
                       </div>
                       <div>
-                        <div className={styles.syncResultValue}>{syncUsers.data.deactivated}</div>
+                        {syncUsers.data.deactivated > 0 ? (
+                          <Popover>
+                            <PopoverTrigger disableButtonEnhancement>
+                              <Link className={styles.syncResultValue} style={{ cursor: 'pointer' }}>{syncUsers.data.deactivated}</Link>
+                            </PopoverTrigger>
+                            <PopoverSurface style={{ maxWidth: '350px', maxHeight: '300px', overflow: 'auto' }}>
+                              <Body1Strong style={{ display: 'block', marginBottom: tokens.spacingVerticalS }}>Deactivated Users</Body1Strong>
+                              {syncUsers.data.deactivatedUsers?.map((user, idx) => (
+                                <div key={idx} style={{ marginBottom: tokens.spacingVerticalS, paddingBottom: tokens.spacingVerticalS, borderBottom: idx < syncUsers.data.deactivatedUsers.length - 1 ? `1px solid ${tokens.colorNeutralStroke2}` : 'none' }}>
+                                  <div style={{ fontWeight: 600 }}>{user.name}</div>
+                                  <Caption1 style={{ display: 'block' }}>{user.email}</Caption1>
+                                  <Caption1 style={{ display: 'block' }}>Role: {user.role}{user.department ? ` • Dept: ${user.department}` : ''}</Caption1>
+                                </div>
+                              ))}
+                            </PopoverSurface>
+                          </Popover>
+                        ) : (
+                          <div className={styles.syncResultValue}>{syncUsers.data.deactivated}</div>
+                        )}
                         <div className={styles.syncResultLabel}>Deactivated</div>
                       </div>
                     </div>
@@ -1187,7 +1248,24 @@ export const AdminPanel = () => {
                         <BuildingRegular style={{ color: tokens.colorPaletteGreenForeground1 }} />
                       </div>
                       <div>
-                        <div className={styles.syncResultValue}>{syncUsers.data.departmentsCreated}</div>
+                        {syncUsers.data.departmentsCreated > 0 ? (
+                          <Popover>
+                            <PopoverTrigger disableButtonEnhancement>
+                              <Link className={styles.syncResultValue} style={{ cursor: 'pointer' }}>{syncUsers.data.departmentsCreated}</Link>
+                            </PopoverTrigger>
+                            <PopoverSurface style={{ maxWidth: '300px' }}>
+                              <Body1Strong style={{ display: 'block', marginBottom: tokens.spacingVerticalS }}>Created Departments</Body1Strong>
+                              {syncUsers.data.createdDepartments?.map((dept, idx) => (
+                                <div key={idx} style={{ marginBottom: tokens.spacingVerticalXS }}>
+                                  <span style={{ fontWeight: 600 }}>{dept.name}</span>
+                                  <Caption1 style={{ marginLeft: tokens.spacingHorizontalS }}>({dept.code})</Caption1>
+                                </div>
+                              ))}
+                            </PopoverSurface>
+                          </Popover>
+                        ) : (
+                          <div className={styles.syncResultValue}>{syncUsers.data.departmentsCreated}</div>
+                        )}
                         <div className={styles.syncResultLabel}>Created</div>
                       </div>
                     </div>
@@ -1196,7 +1274,24 @@ export const AdminPanel = () => {
                         <BuildingRegular style={{ color: tokens.colorPaletteBlueForeground2 }} />
                       </div>
                       <div>
-                        <div className={styles.syncResultValue}>{syncUsers.data.departmentsUpdated}</div>
+                        {syncUsers.data.departmentsUpdated > 0 ? (
+                          <Popover>
+                            <PopoverTrigger disableButtonEnhancement>
+                              <Link className={styles.syncResultValue} style={{ cursor: 'pointer' }}>{syncUsers.data.departmentsUpdated}</Link>
+                            </PopoverTrigger>
+                            <PopoverSurface style={{ maxWidth: '300px' }}>
+                              <Body1Strong style={{ display: 'block', marginBottom: tokens.spacingVerticalS }}>Updated Departments</Body1Strong>
+                              {syncUsers.data.updatedDepartments?.map((dept, idx) => (
+                                <div key={idx} style={{ marginBottom: tokens.spacingVerticalXS }}>
+                                  <span style={{ fontWeight: 600 }}>{dept.name}</span>
+                                  <Caption1 style={{ marginLeft: tokens.spacingHorizontalS }}>({dept.code})</Caption1>
+                                </div>
+                              ))}
+                            </PopoverSurface>
+                          </Popover>
+                        ) : (
+                          <div className={styles.syncResultValue}>{syncUsers.data.departmentsUpdated}</div>
+                        )}
                         <div className={styles.syncResultLabel}>Updated</div>
                       </div>
                     </div>
