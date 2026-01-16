@@ -75,7 +75,7 @@ cd functions && npm start    # Requires Azure Functions Core Tools
 ### Database (Azure SQL)
 - Schema in `database/schema.sql`
 - Semantic views for Power BI in `database/views.sql`
-- Core tables: Users, Departments, Projects, Timesheets, TimeEntries, TimesheetHistory
+- Core tables: Users, Departments, Projects, Timesheets, TimeEntries, TimesheetHistory, ApprovalDelegation, AdminAuditLog
 
 ## Key Patterns
 
@@ -90,9 +90,11 @@ cd functions && npm start    # Requires Azure Functions Core Tools
 All routes prefixed with `/api/`:
 - `/api/auth` - Authentication endpoints
 - `/api/timesheets` - Timesheet CRUD
-- `/api/approvals` - Manager approval workflows
+- `/api/approvals` - Manager approval workflows (cascading via org chart)
+- `/api/delegations` - Approval delegation management
 - `/api/projects` - Project management
 - `/api/reports` - Reporting endpoints
+- `/api/scoreboard` - Leaderboard data
 - `/api/dashboard` - Dashboard aggregations
 - `/api/admin` - Admin operations (TimesheetAdmin role)
 - `/api/admin/import` - Data import (Excel)
