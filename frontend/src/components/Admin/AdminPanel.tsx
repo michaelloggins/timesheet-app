@@ -69,8 +69,8 @@ import { useProjects, useCreateProject, useUpdateProject, useDeactivateProject }
 import { useUsers, useSyncUsers, User } from '../../hooks/useUsers';
 import { useDepartments, useCreateDepartment, useUpdateDepartment } from '../../hooks/useDepartments';
 import { useHolidays, useCreateHoliday, useUpdateHoliday, useDeleteHoliday } from '../../hooks/useHolidays';
-import { useAuditLogs, AuditLogFilters } from '../../hooks/useAuditLogs';
-import { getActionInfo } from '../../services/auditService';
+import { useAuditLogs, useAdminAuditLogs, AuditLogFilters, AdminAuditLogFilters } from '../../hooks/useAuditLogs';
+import { getActionInfo, getAdminActionInfo } from '../../services/auditService';
 
 // Parse date string as local date to avoid timezone shift
 const parseLocalDate = (dateStr: string | Date): Date => {
@@ -220,6 +220,8 @@ export const AdminPanel = () => {
   const [isHolidayModalOpen, setIsHolidayModalOpen] = useState(false);
   const [editingHoliday, setEditingHoliday] = useState<Holiday | null>(null);
   const [auditFilters, setAuditFilters] = useState<AuditLogFilters>({ days: 30, limit: 100 });
+  const [adminAuditFilters, setAdminAuditFilters] = useState<AdminAuditLogFilters>({ days: 30, limit: 100 });
+  const [auditLogType, setAuditLogType] = useState<'timesheet' | 'admin'>('admin');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isSyncResultsOpen, setIsSyncResultsOpen] = useState(false);
 
@@ -246,6 +248,7 @@ export const AdminPanel = () => {
 
   // React Query hooks - Audit Logs
   const { logs: auditLogs, isLoading: auditLoading, error: auditError } = useAuditLogs(auditFilters);
+  const { logs: adminAuditLogs, isLoading: adminAuditLoading, error: adminAuditError } = useAdminAuditLogs(adminAuditFilters);
 
   const handleCreateProject = () => {
     setEditingProject(null);
@@ -825,132 +828,278 @@ export const AdminPanel = () => {
               <Title3>Audit Log</Title3>
             </div>
 
-            <div className={styles.filters}>
-              <Field label="Time Period" className={styles.filterField}>
-                <Dropdown
-                  value={auditFilters.days === 7 ? 'Last 7 days' : auditFilters.days === 30 ? 'Last 30 days' : auditFilters.days === 90 ? 'Last 90 days' : 'All time'}
-                  onOptionSelect={(_, data) => {
-                    const daysMap: Record<string, number | undefined> = {
-                      'Last 7 days': 7,
-                      'Last 30 days': 30,
-                      'Last 90 days': 90,
-                      'All time': undefined,
-                    };
-                    setAuditFilters({ ...auditFilters, days: daysMap[data.optionText || ''] });
-                  }}
-                >
-                  <Option>Last 7 days</Option>
-                  <Option>Last 30 days</Option>
-                  <Option>Last 90 days</Option>
-                  <Option>All time</Option>
-                </Dropdown>
-              </Field>
+            {/* Log Type Toggle */}
+            <TabList
+              selectedValue={auditLogType}
+              onTabSelect={(_, data) => setAuditLogType(data.value as 'timesheet' | 'admin')}
+              size="small"
+              style={{ marginBottom: tokens.spacingVerticalM }}
+            >
+              <Tab value="admin">Admin Actions</Tab>
+              <Tab value="timesheet">Timesheet Activity</Tab>
+            </TabList>
 
-              <Field label="Action Type" className={styles.filterField}>
-                <Dropdown
-                  value={auditFilters.action || 'All actions'}
-                  onOptionSelect={(_, data) => {
-                    const action = data.optionText === 'All actions' ? undefined : data.optionText;
-                    setAuditFilters({ ...auditFilters, action });
-                  }}
-                >
-                  <Option>All actions</Option>
-                  <Option>Created</Option>
-                  <Option>Submitted</Option>
-                  <Option>Approved</Option>
-                  <Option>Returned</Option>
-                  <Option>Withdrawn</Option>
-                  <Option>Unlocked</Option>
-                  <Option>Modified</Option>
-                </Dropdown>
-              </Field>
-            </div>
+            {/* Admin Actions Log */}
+            {auditLogType === 'admin' && (
+              <>
+                <div className={styles.filters}>
+                  <Field label="Time Period" className={styles.filterField}>
+                    <Dropdown
+                      value={adminAuditFilters.days === 7 ? 'Last 7 days' : adminAuditFilters.days === 30 ? 'Last 30 days' : adminAuditFilters.days === 90 ? 'Last 90 days' : 'All time'}
+                      onOptionSelect={(_, data) => {
+                        const daysMap: Record<string, number | undefined> = {
+                          'Last 7 days': 7,
+                          'Last 30 days': 30,
+                          'Last 90 days': 90,
+                          'All time': undefined,
+                        };
+                        setAdminAuditFilters({ ...adminAuditFilters, days: daysMap[data.optionText || ''] });
+                      }}
+                    >
+                      <Option>Last 7 days</Option>
+                      <Option>Last 30 days</Option>
+                      <Option>Last 90 days</Option>
+                      <Option>All time</Option>
+                    </Dropdown>
+                  </Field>
 
-            {auditError && (
-              <MessageBar intent="error">
-                <MessageBarBody>
-                  <MessageBarTitle>Error Loading Audit Logs</MessageBarTitle>
-                  {auditError instanceof Error ? auditError.message : 'Failed to load audit logs'}
-                </MessageBarBody>
-              </MessageBar>
-            )}
+                  <Field label="Action Type" className={styles.filterField}>
+                    <Dropdown
+                      value={adminAuditFilters.actionType || 'All actions'}
+                      onOptionSelect={(_, data) => {
+                        const actionMap: Record<string, string | undefined> = {
+                          'All actions': undefined,
+                          'User Sync': 'USER_SYNC',
+                          'Project Changes': 'PROJECT_',
+                          'Department Changes': 'DEPARTMENT_',
+                          'Holiday Changes': 'HOLIDAY_',
+                        };
+                        setAdminAuditFilters({ ...adminAuditFilters, actionType: actionMap[data.optionText || ''] });
+                      }}
+                    >
+                      <Option>All actions</Option>
+                      <Option>User Sync</Option>
+                      <Option>Project Changes</Option>
+                      <Option>Department Changes</Option>
+                      <Option>Holiday Changes</Option>
+                    </Dropdown>
+                  </Field>
+                </div>
 
-            {auditLoading ? (
-              <Spinner label="Loading audit logs..." />
-            ) : (
-              <div className={styles.tableContainer}>
-                <div className={styles.tableWrapper}>
-                  <Table className={styles.tableWide}>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHeaderCell style={{ width: '150px' }}>Date & Time</TableHeaderCell>
-                        <TableHeaderCell style={{ width: '100px' }}>Action</TableHeaderCell>
-                        <TableHeaderCell style={{ width: '160px' }}>Performed By</TableHeaderCell>
-                        <TableHeaderCell style={{ width: '160px' }}>Timesheet Owner</TableHeaderCell>
-                        <TableHeaderCell style={{ width: '130px' }}>Period</TableHeaderCell>
-                        <TableHeaderCell style={{ width: '90px' }}>Notes</TableHeaderCell>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {auditLogs && auditLogs.length > 0 ? (
-                        auditLogs.map((log) => {
-                          const actionInfo = getActionInfo(log.action);
-                          return (
-                            <TableRow key={log.historyId}>
-                              <TableCell>
-                                {new Date(log.actionDate).toLocaleDateString()}{' '}
-                                {new Date(log.actionDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                              </TableCell>
-                              <TableCell>
-                                <Badge
-                                  appearance="filled"
-                                  color={actionInfo.color}
-                                  className={styles.badge}
-                                >
-                                  {actionInfo.label}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className={styles.cellTruncate} title={log.actionBy.name}>
-                                {log.actionBy.name}
-                              </TableCell>
-                              <TableCell className={styles.cellTruncate} title={log.timesheetOwner?.name || '-'}>
-                                {log.timesheetOwner?.name || '-'}
-                              </TableCell>
-                              <TableCell>
-                                {log.periodStartDate && log.periodEndDate ? (
-                                  <span>
-                                    {parseLocalDate(log.periodStartDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                                    {' - '}
-                                    {parseLocalDate(log.periodEndDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                                  </span>
-                                ) : '-'}
-                              </TableCell>
-                              <TableCell>
-                                {log.notes ? (
-                                  <Popover>
-                                    <PopoverTrigger disableButtonEnhancement>
-                                      <Link>See Notes</Link>
-                                    </PopoverTrigger>
-                                    <PopoverSurface style={{ maxWidth: '300px' }}>
-                                      {log.notes}
-                                    </PopoverSurface>
-                                  </Popover>
-                                ) : '-'}
+                {adminAuditError && (
+                  <MessageBar intent="error">
+                    <MessageBarBody>
+                      <MessageBarTitle>Error Loading Admin Audit Logs</MessageBarTitle>
+                      {adminAuditError instanceof Error ? adminAuditError.message : 'Failed to load audit logs'}
+                    </MessageBarBody>
+                  </MessageBar>
+                )}
+
+                {adminAuditLoading ? (
+                  <Spinner label="Loading admin audit logs..." />
+                ) : (
+                  <div className={styles.tableContainer}>
+                    <div className={styles.tableWrapper}>
+                      <Table className={styles.tableWide}>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHeaderCell style={{ width: '150px' }}>Date & Time</TableHeaderCell>
+                            <TableHeaderCell style={{ width: '130px' }}>Action</TableHeaderCell>
+                            <TableHeaderCell style={{ width: '150px' }}>Performed By</TableHeaderCell>
+                            <TableHeaderCell style={{ width: '100px' }}>Entity Type</TableHeaderCell>
+                            <TableHeaderCell style={{ width: '200px' }}>Entity Name</TableHeaderCell>
+                            <TableHeaderCell style={{ width: '80px' }}>Details</TableHeaderCell>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {adminAuditLogs && adminAuditLogs.length > 0 ? (
+                            adminAuditLogs.map((log) => {
+                              const actionInfo = getAdminActionInfo(log.actionType);
+                              return (
+                                <TableRow key={log.auditId}>
+                                  <TableCell>
+                                    {new Date(log.actionDate).toLocaleDateString()}{' '}
+                                    {new Date(log.actionDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge
+                                      appearance="filled"
+                                      color={actionInfo.color}
+                                      className={styles.badge}
+                                    >
+                                      {actionInfo.label}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className={styles.cellTruncate} title={log.actionBy.name}>
+                                    {log.actionBy.name}
+                                  </TableCell>
+                                  <TableCell>{log.entityType || '-'}</TableCell>
+                                  <TableCell className={styles.cellTruncate} title={log.entityName || '-'}>
+                                    {log.entityName || '-'}
+                                  </TableCell>
+                                  <TableCell>
+                                    {log.details ? (
+                                      <Popover>
+                                        <PopoverTrigger disableButtonEnhancement>
+                                          <Link>View</Link>
+                                        </PopoverTrigger>
+                                        <PopoverSurface style={{ maxWidth: '400px' }}>
+                                          <pre style={{ margin: 0, fontSize: '12px', whiteSpace: 'pre-wrap' }}>
+                                            {JSON.stringify(log.details, null, 2)}
+                                          </pre>
+                                        </PopoverSurface>
+                                      </Popover>
+                                    ) : '-'}
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })
+                          ) : (
+                            <TableRow>
+                              <TableCell colSpan={6} style={{ textAlign: 'center', padding: '2rem' }}>
+                                No admin audit logs found for the selected filters.
                               </TableCell>
                             </TableRow>
-                          );
-                        })
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={6} style={{ textAlign: 'center', padding: '2rem' }}>
-                            No audit logs found for the selected filters.
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Timesheet Activity Log */}
+            {auditLogType === 'timesheet' && (
+              <>
+                <div className={styles.filters}>
+                  <Field label="Time Period" className={styles.filterField}>
+                    <Dropdown
+                      value={auditFilters.days === 7 ? 'Last 7 days' : auditFilters.days === 30 ? 'Last 30 days' : auditFilters.days === 90 ? 'Last 90 days' : 'All time'}
+                      onOptionSelect={(_, data) => {
+                        const daysMap: Record<string, number | undefined> = {
+                          'Last 7 days': 7,
+                          'Last 30 days': 30,
+                          'Last 90 days': 90,
+                          'All time': undefined,
+                        };
+                        setAuditFilters({ ...auditFilters, days: daysMap[data.optionText || ''] });
+                      }}
+                    >
+                      <Option>Last 7 days</Option>
+                      <Option>Last 30 days</Option>
+                      <Option>Last 90 days</Option>
+                      <Option>All time</Option>
+                    </Dropdown>
+                  </Field>
+
+                  <Field label="Action Type" className={styles.filterField}>
+                    <Dropdown
+                      value={auditFilters.action || 'All actions'}
+                      onOptionSelect={(_, data) => {
+                        const action = data.optionText === 'All actions' ? undefined : data.optionText;
+                        setAuditFilters({ ...auditFilters, action });
+                      }}
+                    >
+                      <Option>All actions</Option>
+                      <Option>Created</Option>
+                      <Option>Submitted</Option>
+                      <Option>Approved</Option>
+                      <Option>Returned</Option>
+                      <Option>Withdrawn</Option>
+                      <Option>Unlocked</Option>
+                      <Option>Modified</Option>
+                    </Dropdown>
+                  </Field>
                 </div>
-              </div>
+
+                {auditError && (
+                  <MessageBar intent="error">
+                    <MessageBarBody>
+                      <MessageBarTitle>Error Loading Audit Logs</MessageBarTitle>
+                      {auditError instanceof Error ? auditError.message : 'Failed to load audit logs'}
+                    </MessageBarBody>
+                  </MessageBar>
+                )}
+
+                {auditLoading ? (
+                  <Spinner label="Loading audit logs..." />
+                ) : (
+                  <div className={styles.tableContainer}>
+                    <div className={styles.tableWrapper}>
+                      <Table className={styles.tableWide}>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHeaderCell style={{ width: '150px' }}>Date & Time</TableHeaderCell>
+                            <TableHeaderCell style={{ width: '100px' }}>Action</TableHeaderCell>
+                            <TableHeaderCell style={{ width: '160px' }}>Performed By</TableHeaderCell>
+                            <TableHeaderCell style={{ width: '160px' }}>Timesheet Owner</TableHeaderCell>
+                            <TableHeaderCell style={{ width: '130px' }}>Period</TableHeaderCell>
+                            <TableHeaderCell style={{ width: '90px' }}>Notes</TableHeaderCell>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {auditLogs && auditLogs.length > 0 ? (
+                            auditLogs.map((log) => {
+                              const actionInfo = getActionInfo(log.action);
+                              return (
+                                <TableRow key={log.historyId}>
+                                  <TableCell>
+                                    {new Date(log.actionDate).toLocaleDateString()}{' '}
+                                    {new Date(log.actionDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge
+                                      appearance="filled"
+                                      color={actionInfo.color}
+                                      className={styles.badge}
+                                    >
+                                      {actionInfo.label}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className={styles.cellTruncate} title={log.actionBy.name}>
+                                    {log.actionBy.name}
+                                  </TableCell>
+                                  <TableCell className={styles.cellTruncate} title={log.timesheetOwner?.name || '-'}>
+                                    {log.timesheetOwner?.name || '-'}
+                                  </TableCell>
+                                  <TableCell>
+                                    {log.periodStartDate && log.periodEndDate ? (
+                                      <span>
+                                        {parseLocalDate(log.periodStartDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                        {' - '}
+                                        {parseLocalDate(log.periodEndDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                      </span>
+                                    ) : '-'}
+                                  </TableCell>
+                                  <TableCell>
+                                    {log.notes ? (
+                                      <Popover>
+                                        <PopoverTrigger disableButtonEnhancement>
+                                          <Link>See Notes</Link>
+                                        </PopoverTrigger>
+                                        <PopoverSurface style={{ maxWidth: '300px' }}>
+                                          {log.notes}
+                                        </PopoverSurface>
+                                      </Popover>
+                                    ) : '-'}
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })
+                          ) : (
+                            <TableRow>
+                              <TableCell colSpan={6} style={{ textAlign: 'center', padding: '2rem' }}>
+                                No audit logs found for the selected filters.
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </>
         )}

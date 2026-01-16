@@ -4,7 +4,14 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
-import { getAuditLogs, AuditLogFilters, AuditLogEntry } from '../services/auditService';
+import {
+  getAuditLogs,
+  getAdminAuditLogs,
+  AuditLogFilters,
+  AuditLogEntry,
+  AdminAuditLogFilters,
+  AdminAuditLogEntry,
+} from '../services/auditService';
 
 export const useAuditLogs = (filters: AuditLogFilters = {}) => {
   const {
@@ -27,4 +34,25 @@ export const useAuditLogs = (filters: AuditLogFilters = {}) => {
   };
 };
 
-export type { AuditLogEntry, AuditLogFilters };
+export const useAdminAuditLogs = (filters: AdminAuditLogFilters = {}) => {
+  const {
+    data: logs = [],
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ['adminAuditLogs', filters],
+    queryFn: () => getAdminAuditLogs(filters),
+    staleTime: 1000 * 60 * 2, // 2 minutes
+    refetchOnWindowFocus: true,
+  });
+
+  return {
+    logs,
+    isLoading,
+    error: error as Error | null,
+    refetch,
+  };
+};
+
+export type { AuditLogEntry, AuditLogFilters, AdminAuditLogEntry, AdminAuditLogFilters };

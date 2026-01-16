@@ -315,6 +315,63 @@ export const getAuditLogs = asyncHandler(async (req: Request, res: Response) => 
 });
 
 /**
+ * Get admin audit logs (admin actions like sync, CRUD operations)
+ */
+export const getAdminAuditLogs = asyncHandler(async (req: Request, res: Response) => {
+  const pool = getPool();
+  const { days = 30, actionType, limit = 100 } = req.query;
+
+  const request = pool.request()
+    .input('days', parseInt(days as string))
+    .input('limit', Math.min(parseInt(limit as string), 500));
+
+  let whereClause = 'WHERE a.ActionDate >= DATEADD(DAY, -@days, GETUTCDATE())';
+
+  if (actionType) {
+    request.input('actionType', actionType);
+    whereClause += ' AND a.ActionType = @actionType';
+  }
+
+  const result = await request.query(`
+    SELECT TOP (@limit)
+      a.AuditID,
+      a.ActionType,
+      a.ActionDate,
+      a.EntityType,
+      a.EntityID,
+      a.EntityName,
+      a.Details,
+      a.IPAddress,
+      a.ActionByUserID,
+      u.Name AS ActionByName,
+      u.Email AS ActionByEmail
+    FROM AdminAuditLog a
+    INNER JOIN Users u ON a.ActionByUserID = u.UserID
+    ${whereClause}
+    ORDER BY a.ActionDate DESC
+  `);
+
+  res.status(200).json({
+    status: 'success',
+    data: result.recordset.map(row => ({
+      auditId: row.AuditID,
+      actionType: row.ActionType,
+      actionDate: row.ActionDate,
+      entityType: row.EntityType,
+      entityId: row.EntityID,
+      entityName: row.EntityName,
+      details: row.Details ? JSON.parse(row.Details) : null,
+      ipAddress: row.IPAddress,
+      actionBy: {
+        userId: row.ActionByUserID,
+        name: row.ActionByName,
+        email: row.ActionByEmail,
+      },
+    })),
+  });
+});
+
+/**
  * Get all holidays
  */
 export const getHolidays = asyncHandler(async (req: Request, res: Response) => {

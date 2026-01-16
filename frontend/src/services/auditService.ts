@@ -56,6 +56,69 @@ export const getAuditLogs = async (filters: AuditLogFilters = {}): Promise<Audit
 };
 
 /**
+ * Admin Audit Log Entry (for admin actions like sync, CRUD operations)
+ */
+export interface AdminAuditLogEntry {
+  auditId: number;
+  actionType: string;
+  actionDate: string;
+  entityType: string | null;
+  entityId: number | null;
+  entityName: string | null;
+  details: Record<string, unknown> | null;
+  ipAddress: string | null;
+  actionBy: {
+    userId: number;
+    name: string;
+    email: string;
+  };
+}
+
+export interface AdminAuditLogFilters {
+  days?: number;
+  actionType?: string;
+  limit?: number;
+}
+
+/**
+ * Get admin audit logs (admin actions like sync, project/dept CRUD)
+ */
+export const getAdminAuditLogs = async (filters: AdminAuditLogFilters = {}): Promise<AdminAuditLogEntry[]> => {
+  const params = new URLSearchParams();
+  if (filters.days) params.append('days', filters.days.toString());
+  if (filters.actionType) params.append('actionType', filters.actionType);
+  if (filters.limit) params.append('limit', filters.limit.toString());
+
+  const queryString = params.toString();
+  const url = `/admin/admin-audit-logs${queryString ? `?${queryString}` : ''}`;
+
+  const response = await apiClient.get<ApiResponse<AdminAuditLogEntry[]>>(url);
+  return response.data.data || [];
+};
+
+/**
+ * Get admin action display text and color
+ */
+export const getAdminActionInfo = (actionType: string): { label: string; color: 'informative' | 'success' | 'warning' | 'danger' | 'important' } => {
+  const actionMap: Record<string, { label: string; color: 'informative' | 'success' | 'warning' | 'danger' | 'important' }> = {
+    'USER_SYNC': { label: 'User Sync', color: 'informative' },
+    'USER_CREATE': { label: 'User Created', color: 'success' },
+    'USER_UPDATE': { label: 'User Updated', color: 'informative' },
+    'USER_DEACTIVATE': { label: 'User Deactivated', color: 'danger' },
+    'PROJECT_CREATE': { label: 'Project Created', color: 'success' },
+    'PROJECT_UPDATE': { label: 'Project Updated', color: 'informative' },
+    'PROJECT_DEACTIVATE': { label: 'Project Deactivated', color: 'danger' },
+    'DEPARTMENT_CREATE': { label: 'Dept Created', color: 'success' },
+    'DEPARTMENT_UPDATE': { label: 'Dept Updated', color: 'informative' },
+    'HOLIDAY_CREATE': { label: 'Holiday Created', color: 'success' },
+    'HOLIDAY_UPDATE': { label: 'Holiday Updated', color: 'informative' },
+    'HOLIDAY_DELETE': { label: 'Holiday Deleted', color: 'danger' },
+    'SYSTEM_CONFIG_UPDATE': { label: 'Config Updated', color: 'warning' },
+  };
+  return actionMap[actionType] || { label: actionType, color: 'informative' };
+};
+
+/**
  * Get action display text and color
  */
 export const getActionInfo = (action: AuditLogEntry['action']): { label: string; color: 'informative' | 'success' | 'warning' | 'danger' | 'important' } => {

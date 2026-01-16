@@ -29,6 +29,7 @@ router.put('/config', adminController.updateSystemConfig);
 
 // Audit logs
 router.get('/audit-logs', adminController.getAuditLogs);
+router.get('/admin-audit-logs', adminController.getAdminAuditLogs);
 
 // Holiday management
 router.get('/holidays', adminController.getHolidays);
