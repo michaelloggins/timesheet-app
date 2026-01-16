@@ -1026,15 +1026,29 @@ export const AdminPanel = () => {
                         <div className={styles.syncResultLabel}>Deactivated</div>
                       </div>
                     </div>
+                  </div>
+
+                  {/* Departments Section */}
+                  <Body1Strong style={{ marginBottom: tokens.spacingVerticalS, marginTop: tokens.spacingVerticalM, display: 'block' }}>
+                    Departments
+                  </Body1Strong>
+                  <div className={styles.syncResultsGrid}>
                     <div className={styles.syncResultItem}>
-                      <div className={styles.syncResultIcon} style={{ backgroundColor: tokens.colorPaletteYellowBackground2 }}>
-                        <BuildingRegular style={{ color: tokens.colorPaletteYellowForeground1 }} />
+                      <div className={styles.syncResultIcon} style={{ backgroundColor: tokens.colorPaletteGreenBackground2 }}>
+                        <BuildingRegular style={{ color: tokens.colorPaletteGreenForeground1 }} />
                       </div>
                       <div>
-                        <div className={styles.syncResultValue}>
-                          {syncUsers.data.departmentsCreated + syncUsers.data.departmentsUpdated}
-                        </div>
-                        <div className={styles.syncResultLabel}>Depts Synced</div>
+                        <div className={styles.syncResultValue}>{syncUsers.data.departmentsCreated}</div>
+                        <div className={styles.syncResultLabel}>Created</div>
+                      </div>
+                    </div>
+                    <div className={styles.syncResultItem}>
+                      <div className={styles.syncResultIcon} style={{ backgroundColor: tokens.colorPaletteBlueBackground2 }}>
+                        <BuildingRegular style={{ color: tokens.colorPaletteBlueForeground2 }} />
+                      </div>
+                      <div>
+                        <div className={styles.syncResultValue}>{syncUsers.data.departmentsUpdated}</div>
+                        <div className={styles.syncResultLabel}>Updated</div>
                       </div>
                     </div>
                   </div>
