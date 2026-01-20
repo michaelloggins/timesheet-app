@@ -346,7 +346,8 @@ const formatDate = (dateStr: string): string => {
   });
 };
 
-const getInitials = (name: string): string => {
+const getInitials = (name: string | undefined | null): string => {
+  if (!name) return '?';
   const parts = name.split(' ').filter(Boolean);
   if (parts.length === 0) return '?';
   if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
@@ -633,10 +634,10 @@ export const DelegationSettings = ({ embedded = false }: DelegationSettingsProps
                         {getInitials(delegation.delegateName)}
                       </div>
                       <div className={styles.delegateDetails}>
-                        <Body1Strong>{delegation.delegateName}</Body1Strong>
+                        <Body1Strong>{delegation.delegateName || 'Unknown'}</Body1Strong>
                         <div className={styles.delegateEmail}>
                           <Mail24Regular style={{ fontSize: '14px' }} />
-                          <span>{delegation.delegateEmail}</span>
+                          <span>{delegation.delegateEmail || 'No email'}</span>
                         </div>
                       </div>
                     </div>

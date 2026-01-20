@@ -363,34 +363,27 @@ export const getScopedEmployees = asyncHandler(async (req: Request, res: Respons
 
 /**
  * Helper function to format delegation response
+ * Returns flat structure matching frontend Delegation interface
  */
 function formatDelegationResponse(delegation: delegationService.DelegationWithNames) {
   return {
     delegationId: delegation.DelegationID,
-    delegator: {
-      userId: delegation.DelegatorUserID,
-      name: delegation.DelegatorName,
-      email: delegation.DelegatorEmail,
-    },
-    delegate: {
-      userId: delegation.DelegateUserID,
-      name: delegation.DelegateName,
-      email: delegation.DelegateEmail,
-    },
+    delegatorUserId: delegation.DelegatorUserID,
+    delegatorName: delegation.DelegatorName,
+    delegatorEmail: delegation.DelegatorEmail,
+    delegateUserId: delegation.DelegateUserID,
+    delegateName: delegation.DelegateName,
+    delegateEmail: delegation.DelegateEmail,
     startDate: delegation.StartDate,
     endDate: delegation.EndDate,
     reason: delegation.Reason,
     isActive: delegation.IsActive,
     createdDate: delegation.CreatedDate,
-    createdBy: {
-      userId: delegation.CreatedByUserID,
-      name: delegation.CreatedByName,
-    },
+    createdByUserId: delegation.CreatedByUserID,
+    createdByName: delegation.CreatedByName,
     revokedDate: delegation.RevokedDate,
-    revokedBy: delegation.RevokedByUserID ? {
-      userId: delegation.RevokedByUserID,
-      name: delegation.RevokedByName,
-    } : null,
+    revokedByUserId: delegation.RevokedByUserID,
+    revokedByName: delegation.RevokedByName,
     scopedEmployees: delegation.ScopedEmployees || [],
   };
 }
