@@ -36,12 +36,13 @@ import {
 import {
   Add24Regular,
   Delete24Regular,
-  Person24Regular,
   Calendar24Regular,
   ArrowLeft24Regular,
   Dismiss24Regular,
-  ArrowRight24Regular,
   PersonSwap24Regular,
+  Edit24Regular,
+  PeopleTeam24Regular,
+  Mail24Regular,
 } from '@fluentui/react-icons';
 import { useNavigate } from 'react-router-dom';
 import { useDelegations, useEligibleDelegates, useDirectReports } from '../../hooks/useDelegations';
@@ -214,6 +215,111 @@ const useStyles = makeStyles({
   arrowIcon: {
     color: tokens.colorNeutralForeground3,
   },
+  delegateCard: {
+    display: 'flex',
+    flexDirection: 'column',
+    ...shorthands.gap(tokens.spacingVerticalXS),
+    ...shorthands.padding(tokens.spacingVerticalS, tokens.spacingHorizontalM),
+    backgroundColor: tokens.colorNeutralBackground2,
+    ...shorthands.borderRadius(tokens.borderRadiusMedium),
+    ...shorthands.border('1px', 'solid', tokens.colorNeutralStroke2),
+  },
+  delegateHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    ...shorthands.gap(tokens.spacingHorizontalS),
+  },
+  delegateAvatar: {
+    width: '40px',
+    height: '40px',
+    ...shorthands.borderRadius('50%'),
+    backgroundColor: tokens.colorBrandBackground,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: tokens.colorNeutralForegroundOnBrand,
+    fontWeight: tokens.fontWeightSemibold,
+    fontSize: tokens.fontSizeBase400,
+  },
+  delegateDetails: {
+    display: 'flex',
+    flexDirection: 'column',
+    ...shorthands.gap(tokens.spacingVerticalXXS),
+  },
+  delegateEmail: {
+    display: 'flex',
+    alignItems: 'center',
+    ...shorthands.gap(tokens.spacingHorizontalXS),
+    color: tokens.colorNeutralForeground3,
+    fontSize: tokens.fontSizeBase200,
+  },
+  actionButtons: {
+    display: 'flex',
+    ...shorthands.gap(tokens.spacingHorizontalS),
+    [MOBILE]: {
+      flexDirection: 'column',
+      '& button': {
+        width: '100%',
+        minHeight: '44px',
+      },
+    },
+  },
+  scopedEmployeesBadge: {
+    display: 'flex',
+    alignItems: 'center',
+    ...shorthands.gap(tokens.spacingHorizontalXS),
+    ...shorthands.padding(tokens.spacingVerticalXS, tokens.spacingHorizontalS),
+    backgroundColor: tokens.colorNeutralBackground3,
+    ...shorthands.borderRadius(tokens.borderRadiusMedium),
+    marginTop: tokens.spacingVerticalXS,
+    cursor: 'pointer',
+    ':hover': {
+      backgroundColor: tokens.colorNeutralBackground3Hover,
+    },
+  },
+  scopedEmployeesCount: {
+    fontWeight: tokens.fontWeightSemibold,
+    color: tokens.colorBrandForeground1,
+  },
+  scopedEmployeesLabel: {
+    color: tokens.colorNeutralForeground2,
+    fontSize: tokens.fontSizeBase200,
+  },
+  editEmployeesSection: {
+    display: 'flex',
+    flexDirection: 'column',
+    ...shorthands.gap(tokens.spacingVerticalS),
+    marginTop: tokens.spacingVerticalS,
+    ...shorthands.padding(tokens.spacingVerticalS),
+    backgroundColor: tokens.colorNeutralBackground2,
+    ...shorthands.borderRadius(tokens.borderRadiusMedium),
+  },
+  employeeChip: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    ...shorthands.gap(tokens.spacingHorizontalXS),
+    ...shorthands.padding(tokens.spacingVerticalXXS, tokens.spacingHorizontalS),
+    backgroundColor: tokens.colorNeutralBackground4,
+    ...shorthands.borderRadius(tokens.borderRadiusMedium),
+    fontSize: tokens.fontSizeBase200,
+  },
+  employeeChipRemove: {
+    cursor: 'pointer',
+    ':hover': {
+      color: tokens.colorPaletteRedForeground1,
+    },
+  },
+  allEmployeesBadge: {
+    display: 'flex',
+    alignItems: 'center',
+    ...shorthands.gap(tokens.spacingHorizontalXS),
+    ...shorthands.padding(tokens.spacingVerticalXS, tokens.spacingHorizontalS),
+    backgroundColor: tokens.colorPaletteGreenBackground2,
+    color: tokens.colorPaletteGreenForeground2,
+    ...shorthands.borderRadius(tokens.borderRadiusMedium),
+    marginTop: tokens.spacingVerticalXS,
+    fontSize: tokens.fontSizeBase200,
+  },
 });
 
 interface CreateDelegationFormData {
@@ -225,12 +331,26 @@ interface CreateDelegationFormData {
   employeeIds: number[];  // Specific employees to scope (empty = all direct reports)
 }
 
+interface EditDelegationFormData {
+  delegationId: number;
+  endDate: string;
+  reason: string;
+  employeeIds: number[];
+}
+
 const formatDate = (dateStr: string): string => {
   return new Date(dateStr).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
   });
+};
+
+const getInitials = (name: string): string => {
+  const parts = name.split(' ').filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
 };
 
 const isActiveDelegation = (delegation: Delegation): boolean => {
@@ -252,11 +372,18 @@ export const DelegationSettings = ({ embedded = false }: DelegationSettingsProps
   // State
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isRevokeDialogOpen, setIsRevokeDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedDelegation, setSelectedDelegation] = useState<Delegation | null>(null);
   const [formData, setFormData] = useState<CreateDelegationFormData>({
     delegatorUserId: null,
     delegateUserId: null,
     startDate: '',
+    endDate: '',
+    reason: '',
+    employeeIds: [],
+  });
+  const [editFormData, setEditFormData] = useState<EditDelegationFormData>({
+    delegationId: 0,
     endDate: '',
     reason: '',
     employeeIds: [],
@@ -270,10 +397,13 @@ export const DelegationSettings = ({ embedded = false }: DelegationSettingsProps
     error,
     create,
     revoke,
+    update,
     isCreating,
     isRevoking,
+    isUpdating,
     createError,
     revokeError,
+    updateError,
   } = useDelegations();
 
   const { data: eligibleDelegates = [], isLoading: loadingDelegates } = useEligibleDelegates();
@@ -358,6 +488,52 @@ export const DelegationSettings = ({ embedded = false }: DelegationSettingsProps
     }
   };
 
+  const handleOpenEditDialog = (delegation: Delegation) => {
+    setSelectedDelegation(delegation);
+    setEditFormData({
+      delegationId: delegation.delegationId,
+      endDate: delegation.endDate.split('T')[0],
+      reason: delegation.reason || '',
+      employeeIds: delegation.scopedEmployees?.map((e) => e.userId) || [],
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleCloseEditDialog = () => {
+    setIsEditDialogOpen(false);
+    setSelectedDelegation(null);
+    setEditFormData({
+      delegationId: 0,
+      endDate: '',
+      reason: '',
+      employeeIds: [],
+    });
+  };
+
+  const handleUpdateDelegation = async () => {
+    if (!selectedDelegation) return;
+
+    try {
+      await update(editFormData.delegationId, {
+        endDate: editFormData.endDate,
+        reason: editFormData.reason || undefined,
+        employeeIds: editFormData.employeeIds,
+      });
+      handleCloseEditDialog();
+    } catch (err) {
+      console.error('Failed to update delegation:', err);
+    }
+  };
+
+  const handleEditEmployeeToggle = (userId: number) => {
+    setEditFormData((prev) => ({
+      ...prev,
+      employeeIds: prev.employeeIds.includes(userId)
+        ? prev.employeeIds.filter((id) => id !== userId)
+        : [...prev.employeeIds, userId],
+    }));
+  };
+
   if (isLoading) {
     return (
       <div className={styles.loadingContainer}>
@@ -429,10 +605,8 @@ export const DelegationSettings = ({ embedded = false }: DelegationSettingsProps
             {given.map((delegation) => (
               <Card key={delegation.delegationId} className={styles.delegationCard}>
                 <div className={styles.delegationInfo}>
-                  <div className={styles.delegationDirection}>
-                    <Body1Strong>You</Body1Strong>
-                    <ArrowRight24Regular className={styles.arrowIcon} />
-                    <Body1Strong>{delegation.delegateName}</Body1Strong>
+                  {/* Status Badge */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalS, marginBottom: tokens.spacingVerticalS }}>
                     <Badge
                       appearance="filled"
                       className={
@@ -441,39 +615,77 @@ export const DelegationSettings = ({ embedded = false }: DelegationSettingsProps
                     >
                       {isActiveDelegation(delegation) ? 'Active' : 'Inactive'}
                     </Badge>
-                  </div>
-                  <div className={styles.delegationMeta}>
                     <div className={styles.metaItem}>
                       <Calendar24Regular style={{ fontSize: '16px' }} />
                       <Text>
                         {formatDate(delegation.startDate)} - {formatDate(delegation.endDate)}
                       </Text>
                     </div>
-                    <div className={styles.metaItem}>
-                      <Person24Regular style={{ fontSize: '16px' }} />
-                      <Caption1>{delegation.delegateEmail}</Caption1>
+                  </div>
+
+                  {/* Delegate Info Card */}
+                  <div className={styles.delegateCard}>
+                    <Caption1 style={{ color: tokens.colorNeutralForeground3, marginBottom: tokens.spacingVerticalXS }}>
+                      Delegated To:
+                    </Caption1>
+                    <div className={styles.delegateHeader}>
+                      <div className={styles.delegateAvatar}>
+                        {getInitials(delegation.delegateName)}
+                      </div>
+                      <div className={styles.delegateDetails}>
+                        <Body1Strong>{delegation.delegateName}</Body1Strong>
+                        <div className={styles.delegateEmail}>
+                          <Mail24Regular style={{ fontSize: '14px' }} />
+                          <span>{delegation.delegateEmail}</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
+
+                  {/* Reason */}
                   {delegation.reason && (
-                    <Caption1 style={{ color: tokens.colorNeutralForeground3 }}>
+                    <Caption1 style={{ color: tokens.colorNeutralForeground3, marginTop: tokens.spacingVerticalS }}>
                       Reason: {delegation.reason}
                     </Caption1>
                   )}
-                  {delegation.scopedEmployees && delegation.scopedEmployees.length > 0 && (
-                    <Caption1 style={{ color: tokens.colorNeutralForeground3 }}>
-                      Scoped to: {delegation.scopedEmployees.map((e) => e.name).join(', ')}
-                    </Caption1>
+
+                  {/* Scoped Employees Display */}
+                  {delegation.scopedEmployees && delegation.scopedEmployees.length > 0 ? (
+                    <div className={styles.scopedEmployeesBadge} onClick={() => delegation.isActive && handleOpenEditDialog(delegation)}>
+                      <PeopleTeam24Regular style={{ fontSize: '16px' }} />
+                      <span className={styles.scopedEmployeesCount}>{delegation.scopedEmployees.length}</span>
+                      <span className={styles.scopedEmployeesLabel}>
+                        employee{delegation.scopedEmployees.length !== 1 ? 's' : ''} scoped
+                      </span>
+                      {delegation.isActive && <Edit24Regular style={{ fontSize: '14px', marginLeft: 'auto' }} />}
+                    </div>
+                  ) : (
+                    <div className={styles.allEmployeesBadge}>
+                      <PeopleTeam24Regular style={{ fontSize: '16px' }} />
+                      <span>All direct reports</span>
+                    </div>
                   )}
                 </div>
+
+                {/* Action Buttons */}
                 {delegation.isActive && (
-                  <Button
-                    appearance="subtle"
-                    icon={<Delete24Regular />}
-                    onClick={() => handleOpenRevokeDialog(delegation)}
-                    className={styles.actionButton}
-                  >
-                    Revoke
-                  </Button>
+                  <div className={styles.actionButtons}>
+                    <Button
+                      appearance="subtle"
+                      icon={<Edit24Regular />}
+                      onClick={() => handleOpenEditDialog(delegation)}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      appearance="subtle"
+                      icon={<Delete24Regular />}
+                      onClick={() => handleOpenRevokeDialog(delegation)}
+                      style={{ color: tokens.colorPaletteRedForeground1 }}
+                    >
+                      Revoke
+                    </Button>
+                  </div>
                 )}
               </Card>
             ))}
@@ -495,10 +707,8 @@ export const DelegationSettings = ({ embedded = false }: DelegationSettingsProps
             {received.map((delegation) => (
               <Card key={delegation.delegationId} className={styles.delegationCard}>
                 <div className={styles.delegationInfo}>
-                  <div className={styles.delegationDirection}>
-                    <Body1Strong>{delegation.delegatorName}</Body1Strong>
-                    <ArrowRight24Regular className={styles.arrowIcon} />
-                    <Body1Strong>You</Body1Strong>
+                  {/* Status Badge */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalS, marginBottom: tokens.spacingVerticalS }}>
                     <Badge
                       appearance="filled"
                       className={
@@ -507,28 +717,54 @@ export const DelegationSettings = ({ embedded = false }: DelegationSettingsProps
                     >
                       {isActiveDelegation(delegation) ? 'Active' : 'Inactive'}
                     </Badge>
-                  </div>
-                  <div className={styles.delegationMeta}>
                     <div className={styles.metaItem}>
                       <Calendar24Regular style={{ fontSize: '16px' }} />
                       <Text>
                         {formatDate(delegation.startDate)} - {formatDate(delegation.endDate)}
                       </Text>
                     </div>
-                    <div className={styles.metaItem}>
-                      <Person24Regular style={{ fontSize: '16px' }} />
-                      <Caption1>{delegation.delegatorEmail}</Caption1>
+                  </div>
+
+                  {/* Delegator Info Card */}
+                  <div className={styles.delegateCard}>
+                    <Caption1 style={{ color: tokens.colorNeutralForeground3, marginBottom: tokens.spacingVerticalXS }}>
+                      Delegated From:
+                    </Caption1>
+                    <div className={styles.delegateHeader}>
+                      <div className={styles.delegateAvatar}>
+                        {getInitials(delegation.delegatorName)}
+                      </div>
+                      <div className={styles.delegateDetails}>
+                        <Body1Strong>{delegation.delegatorName}</Body1Strong>
+                        <div className={styles.delegateEmail}>
+                          <Mail24Regular style={{ fontSize: '14px' }} />
+                          <span>{delegation.delegatorEmail}</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
+
+                  {/* Reason */}
                   {delegation.reason && (
-                    <Caption1 style={{ color: tokens.colorNeutralForeground3 }}>
+                    <Caption1 style={{ color: tokens.colorNeutralForeground3, marginTop: tokens.spacingVerticalS }}>
                       Reason: {delegation.reason}
                     </Caption1>
                   )}
-                  {delegation.scopedEmployees && delegation.scopedEmployees.length > 0 && (
-                    <Caption1 style={{ color: tokens.colorNeutralForeground3 }}>
-                      For employees: {delegation.scopedEmployees.map((e) => e.name).join(', ')}
-                    </Caption1>
+
+                  {/* Scoped Employees Display */}
+                  {delegation.scopedEmployees && delegation.scopedEmployees.length > 0 ? (
+                    <div className={styles.scopedEmployeesBadge} style={{ cursor: 'default' }}>
+                      <PeopleTeam24Regular style={{ fontSize: '16px' }} />
+                      <span className={styles.scopedEmployeesCount}>{delegation.scopedEmployees.length}</span>
+                      <span className={styles.scopedEmployeesLabel}>
+                        employee{delegation.scopedEmployees.length !== 1 ? 's' : ''}: {delegation.scopedEmployees.map((e) => e.name).join(', ')}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className={styles.allEmployeesBadge}>
+                      <PeopleTeam24Regular style={{ fontSize: '16px' }} />
+                      <span>All direct reports of {delegation.delegatorName.split(' ')[0]}</span>
+                    </div>
                   )}
                 </div>
               </Card>
@@ -747,6 +983,133 @@ export const DelegationSettings = ({ embedded = false }: DelegationSettingsProps
                 {isRevoking ? 'Revoking...' : 'Revoke Delegation'}
               </Button>
               <Button appearance="subtle" onClick={handleCloseRevokeDialog}>
+                Cancel
+              </Button>
+            </DialogActions>
+          </DialogBody>
+        </DialogSurface>
+      </Dialog>
+
+      {/* Edit Delegation Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={(_, data) => setIsEditDialogOpen(data.open)}>
+        <DialogSurface className={styles.dialogSurface}>
+          <DialogTitle>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>Edit Delegation</span>
+              <Button
+                appearance="subtle"
+                icon={<Dismiss24Regular />}
+                onClick={handleCloseEditDialog}
+                aria-label="Close"
+              />
+            </div>
+          </DialogTitle>
+          <DialogBody>
+            <DialogContent>
+              {updateError && (
+                <MessageBar intent="error" style={{ marginBottom: tokens.spacingVerticalM }}>
+                  <MessageBarBody>
+                    <MessageBarTitle>Error</MessageBarTitle>
+                    {updateError.message}
+                  </MessageBarBody>
+                </MessageBar>
+              )}
+
+              {/* Delegate Info (read-only) */}
+              {selectedDelegation && (
+                <div className={styles.delegateCard} style={{ marginBottom: tokens.spacingVerticalM }}>
+                  <Caption1 style={{ color: tokens.colorNeutralForeground3, marginBottom: tokens.spacingVerticalXS }}>
+                    Delegated To:
+                  </Caption1>
+                  <div className={styles.delegateHeader}>
+                    <div className={styles.delegateAvatar}>
+                      {getInitials(selectedDelegation.delegateName)}
+                    </div>
+                    <div className={styles.delegateDetails}>
+                      <Body1Strong>{selectedDelegation.delegateName}</Body1Strong>
+                      <div className={styles.delegateEmail}>
+                        <Mail24Regular style={{ fontSize: '14px' }} />
+                        <span>{selectedDelegation.delegateEmail}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Start Date (read-only) */}
+              {selectedDelegation && (
+                <Field label="Start Date" className={styles.formField}>
+                  <Input
+                    type="date"
+                    value={selectedDelegation.startDate.split('T')[0]}
+                    disabled
+                  />
+                </Field>
+              )}
+
+              <Field label="End Date" required className={styles.formField}>
+                <Input
+                  type="date"
+                  value={editFormData.endDate}
+                  min={selectedDelegation?.startDate.split('T')[0]}
+                  onChange={(_, data) =>
+                    setEditFormData((prev) => ({ ...prev, endDate: data.value }))
+                  }
+                />
+              </Field>
+
+              <Field label="Reason (Optional)" className={styles.formField}>
+                <Input
+                  placeholder="e.g., Vacation, Medical Leave"
+                  value={editFormData.reason}
+                  onChange={(_, data) =>
+                    setEditFormData((prev) => ({ ...prev, reason: data.value }))
+                  }
+                />
+              </Field>
+
+              {/* Employee Scoping */}
+              {directReports.length > 0 && (
+                <Field
+                  label="Scope to Specific Employees"
+                  hint="Select specific employees or leave empty for all direct reports"
+                  className={styles.formField}
+                >
+                  {loadingDirectReports ? (
+                    <Spinner size="tiny" label="Loading employees..." />
+                  ) : (
+                    <div className={styles.employeeList}>
+                      {directReports.map((employee) => (
+                        <Checkbox
+                          key={employee.userId}
+                          label={`${employee.name} (${employee.email})`}
+                          checked={editFormData.employeeIds.includes(employee.userId)}
+                          onChange={() => handleEditEmployeeToggle(employee.userId)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  {editFormData.employeeIds.length > 0 ? (
+                    <Caption1 style={{ marginTop: tokens.spacingVerticalXS }}>
+                      {editFormData.employeeIds.length} employee(s) selected
+                    </Caption1>
+                  ) : (
+                    <Caption1 style={{ marginTop: tokens.spacingVerticalXS, color: tokens.colorPaletteGreenForeground1 }}>
+                      Applies to all direct reports
+                    </Caption1>
+                  )}
+                </Field>
+              )}
+            </DialogContent>
+            <DialogActions className={styles.dialogActions}>
+              <Button
+                appearance="primary"
+                onClick={handleUpdateDelegation}
+                disabled={isUpdating || !editFormData.endDate}
+              >
+                {isUpdating ? 'Saving...' : 'Save Changes'}
+              </Button>
+              <Button appearance="subtle" onClick={handleCloseEditDialog}>
                 Cancel
               </Button>
             </DialogActions>

@@ -9,6 +9,7 @@ import {
   Settings24Regular,
 } from '@fluentui/react-icons';
 import { usePendingApprovalCount } from '../../hooks/useApprovals';
+import { useCurrentUser } from '../../hooks/useCurrentUser';
 
 const useStyles = makeStyles({
   sidebar: {
@@ -63,6 +64,7 @@ interface SidebarProps {
 export const Sidebar = ({ onNavigate }: SidebarProps) => {
   const styles = useStyles();
   const { count: pendingCount } = usePendingApprovalCount();
+  const { hasAdminAccess } = useCurrentUser();
 
   const handleNavClick = () => {
     // Close sidebar on mobile when navigating
@@ -104,10 +106,12 @@ export const Sidebar = ({ onNavigate }: SidebarProps) => {
           <DocumentTable24Regular />
           Reports
         </NavLink>
-        <NavLink to="/admin" className={styles.navLink} onClick={handleNavClick}>
-          <Settings24Regular />
-          Admin
-        </NavLink>
+        {hasAdminAccess && (
+          <NavLink to="/admin" className={styles.navLink} onClick={handleNavClick}>
+            <Settings24Regular />
+            Admin
+          </NavLink>
+        )}
       </nav>
     </aside>
   );

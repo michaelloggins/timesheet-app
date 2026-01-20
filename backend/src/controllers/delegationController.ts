@@ -209,6 +209,159 @@ export const getDirectReports = asyncHandler(async (req: Request, res: Response)
 });
 
 /**
+ * PUT /api/delegations/:id
+ * Update an existing delegation (end date, reason, scoped employees)
+ */
+export const updateDelegation = asyncHandler(async (req: Request, res: Response) => {
+  const user = req.user!;
+  const { id } = req.params;
+  const { endDate, reason, employeeIds } = req.body;
+
+  const delegationId = parseInt(id, 10);
+  if (isNaN(delegationId)) {
+    throw new AppError(400, 'Invalid delegation ID');
+  }
+
+  // Parse end date if provided
+  let parsedEndDate: Date | undefined;
+  if (endDate !== undefined) {
+    parsedEndDate = new Date(endDate);
+    if (isNaN(parsedEndDate.getTime())) {
+      throw new AppError(400, 'Invalid end date format');
+    }
+  }
+
+  // Parse employee IDs if provided
+  let parsedEmployeeIds: number[] | undefined;
+  if (employeeIds !== undefined) {
+    if (!Array.isArray(employeeIds)) {
+      throw new AppError(400, 'employeeIds must be an array');
+    }
+    parsedEmployeeIds = employeeIds.map((id: string | number) => parseInt(String(id), 10));
+  }
+
+  const updatedDelegation = await delegationService.updateDelegation(
+    {
+      delegationId,
+      endDate: parsedEndDate,
+      reason,
+      employeeIds: parsedEmployeeIds,
+    },
+    user.userId,
+    user.role
+  );
+
+  res.status(200).json({
+    status: 'success',
+    message: 'Delegation updated successfully',
+    data: formatDelegationResponse(updatedDelegation),
+  });
+});
+
+/**
+ * POST /api/delegations/:id/employees
+ * Add employees to a delegation's scope
+ */
+export const addEmployees = asyncHandler(async (req: Request, res: Response) => {
+  const user = req.user!;
+  const { id } = req.params;
+  const { employeeIds } = req.body;
+
+  const delegationId = parseInt(id, 10);
+  if (isNaN(delegationId)) {
+    throw new AppError(400, 'Invalid delegation ID');
+  }
+
+  if (!employeeIds || !Array.isArray(employeeIds) || employeeIds.length === 0) {
+    throw new AppError(400, 'employeeIds array is required');
+  }
+
+  const parsedEmployeeIds = employeeIds.map((empId: string | number) => parseInt(String(empId), 10));
+
+  const scopedEmployees = await delegationService.addEmployeesToDelegation(
+    delegationId,
+    parsedEmployeeIds,
+    user.userId,
+    user.role
+  );
+
+  res.status(200).json({
+    status: 'success',
+    message: 'Employees added to delegation',
+    data: scopedEmployees,
+  });
+});
+
+/**
+ * DELETE /api/delegations/:id/employees
+ * Remove employees from a delegation's scope
+ */
+export const removeEmployees = asyncHandler(async (req: Request, res: Response) => {
+  const user = req.user!;
+  const { id } = req.params;
+  const { employeeIds } = req.body;
+
+  const delegationId = parseInt(id, 10);
+  if (isNaN(delegationId)) {
+    throw new AppError(400, 'Invalid delegation ID');
+  }
+
+  if (!employeeIds || !Array.isArray(employeeIds) || employeeIds.length === 0) {
+    throw new AppError(400, 'employeeIds array is required');
+  }
+
+  const parsedEmployeeIds = employeeIds.map((empId: string | number) => parseInt(String(empId), 10));
+
+  const scopedEmployees = await delegationService.removeEmployeesFromDelegation(
+    delegationId,
+    parsedEmployeeIds,
+    user.userId,
+    user.role
+  );
+
+  res.status(200).json({
+    status: 'success',
+    message: 'Employees removed from delegation',
+    data: scopedEmployees,
+  });
+});
+
+/**
+ * GET /api/delegations/:id/employees
+ * Get scoped employees for a delegation
+ */
+export const getScopedEmployees = asyncHandler(async (req: Request, res: Response) => {
+  const user = req.user!;
+  const { id } = req.params;
+
+  const delegationId = parseInt(id, 10);
+  if (isNaN(delegationId)) {
+    throw new AppError(400, 'Invalid delegation ID');
+  }
+
+  // Verify user has access to this delegation
+  const delegation = await delegationService.getDelegationById(delegationId);
+  if (!delegation) {
+    throw new AppError(404, 'Delegation not found');
+  }
+
+  const isAdmin = user.role === 'TimesheetAdmin';
+  const isDelegator = delegation.DelegatorUserID === user.userId;
+  const isDelegate = delegation.DelegateUserID === user.userId;
+
+  if (!isAdmin && !isDelegator && !isDelegate) {
+    throw new AppError(403, 'You do not have access to this delegation');
+  }
+
+  const scopedEmployees = await delegationService.getScopedEmployees(delegationId);
+
+  res.status(200).json({
+    status: 'success',
+    data: scopedEmployees,
+  });
+});
+
+/**
  * Helper function to format delegation response
  */
 function formatDelegationResponse(delegation: delegationService.DelegationWithNames) {

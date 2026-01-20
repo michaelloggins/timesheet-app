@@ -12,8 +12,12 @@ import {
   revokeDelegation,
   getEligibleDelegates,
   getDirectReports,
+  updateDelegation,
+  addEmployeesToDelegation,
+  removeEmployeesFromDelegation,
+  UpdateDelegationRequest,
 } from '../services/delegationService';
-import { CreateDelegationRequest, Delegation, DelegationSummary } from '../types';
+import { CreateDelegationRequest, Delegation, DelegationSummary, ScopedEmployee } from '../types';
 
 /**
  * Hook to fetch all delegations (both given and received)
@@ -52,12 +56,54 @@ export const useDelegations = () => {
     },
   });
 
+  // Update delegation mutation
+  const updateMutation = useMutation({
+    mutationFn: ({ delegationId, updates }: { delegationId: number; updates: UpdateDelegationRequest }) =>
+      updateDelegation(delegationId, updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['delegations'] });
+      queryClient.invalidateQueries({ queryKey: ['delegationsGiven'] });
+    },
+  });
+
+  // Add employees mutation
+  const addEmployeesMutation = useMutation({
+    mutationFn: ({ delegationId, employeeIds }: { delegationId: number; employeeIds: number[] }) =>
+      addEmployeesToDelegation(delegationId, employeeIds),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['delegations'] });
+      queryClient.invalidateQueries({ queryKey: ['delegationsGiven'] });
+    },
+  });
+
+  // Remove employees mutation
+  const removeEmployeesMutation = useMutation({
+    mutationFn: ({ delegationId, employeeIds }: { delegationId: number; employeeIds: number[] }) =>
+      removeEmployeesFromDelegation(delegationId, employeeIds),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['delegations'] });
+      queryClient.invalidateQueries({ queryKey: ['delegationsGiven'] });
+    },
+  });
+
   const create = async (delegation: CreateDelegationRequest): Promise<Delegation> => {
     return createMutation.mutateAsync(delegation);
   };
 
   const revoke = async (delegationId: number): Promise<void> => {
     await revokeMutation.mutateAsync(delegationId);
+  };
+
+  const update = async (delegationId: number, updates: UpdateDelegationRequest): Promise<Delegation> => {
+    return updateMutation.mutateAsync({ delegationId, updates });
+  };
+
+  const addEmployees = async (delegationId: number, employeeIds: number[]): Promise<ScopedEmployee[]> => {
+    return addEmployeesMutation.mutateAsync({ delegationId, employeeIds });
+  };
+
+  const removeEmployees = async (delegationId: number, employeeIds: number[]): Promise<ScopedEmployee[]> => {
+    return removeEmployeesMutation.mutateAsync({ delegationId, employeeIds });
   };
 
   return {
@@ -69,10 +115,17 @@ export const useDelegations = () => {
     refetch,
     create,
     revoke,
+    update,
+    addEmployees,
+    removeEmployees,
     isCreating: createMutation.isPending,
     isRevoking: revokeMutation.isPending,
+    isUpdating: updateMutation.isPending,
+    isAddingEmployees: addEmployeesMutation.isPending,
+    isRemovingEmployees: removeEmployeesMutation.isPending,
     createError: createMutation.error as Error | null,
     revokeError: revokeMutation.error as Error | null,
+    updateError: updateMutation.error as Error | null,
   };
 };
 

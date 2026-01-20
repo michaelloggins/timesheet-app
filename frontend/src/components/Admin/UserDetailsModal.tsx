@@ -61,11 +61,18 @@ interface UserDetailsModalProps {
   user: User | null;
 }
 
-const roleColors: Record<string, 'informative' | 'success' | 'warning' | 'important'> = {
+const roleColors: Record<string, 'informative' | 'success' | 'warning' | 'important' | 'severe' | 'subtle'> = {
   Employee: 'informative',
   Manager: 'success',
   TimesheetAdmin: 'warning',
   Leadership: 'important',
+  ProjectAdmin: 'severe',
+  AuditReviewer: 'subtle',
+};
+
+const formatWorkWeek = (pattern?: string | null): string => {
+  if (pattern === 'TuesdaySaturday') return 'Tue-Sat';
+  return 'Mon-Fri';
 };
 
 export const UserDetailsModal = ({ open, onClose, user }: UserDetailsModalProps) => {
@@ -140,6 +147,9 @@ export const UserDetailsModal = ({ open, onClose, user }: UserDetailsModalProps)
                   {user.Role}
                 </Badge>
               </span>
+
+              <span className={styles.label}>Work Week</span>
+              <span className={styles.value}>{formatWorkWeek(user.WorkWeekPattern)}</span>
 
               <span className={styles.label}>Last Login</span>
               <span className={styles.value}>{formatDateTime(user.LastLoginDate)}</span>

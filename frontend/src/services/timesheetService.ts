@@ -11,6 +11,23 @@ export interface CreateTimesheetDto {
   periodEndDate: string;
 }
 
+export type WorkWeekPattern = 'MondayFriday' | 'TuesdaySaturday';
+
+export interface WorkWeekInfo {
+  pattern: WorkWeekPattern;
+  workDays: number[];
+  defaultHoursPerDay: number;
+  defaultProjectId: number | null;
+  description: string;
+}
+
+export interface DefaultTimeEntry {
+  workDate: string;
+  projectId: number;
+  hoursWorked: number;
+  workLocation: 'Office' | 'WFH' | 'Other';
+}
+
 export interface UpdateTimesheetDto {
   entries: TimeEntry[];
 }
@@ -34,6 +51,26 @@ export const getMyTimesheets = async (): Promise<Timesheet[]> => {
 };
 
 /**
+ * Get user's work week pattern info
+ * Returns the user's schedule pattern based on Entra ID security group membership
+ */
+export const getWorkWeekInfo = async (): Promise<WorkWeekInfo> => {
+  const response = await apiClient.get<ApiResponse<WorkWeekInfo>>('/timesheets/work-week');
+  return response.data.data;
+};
+
+/**
+ * Get default entries for a specific week based on user's work week pattern
+ * Useful for previewing what entries would be auto-created
+ */
+export const getDefaultEntries = async (weekStartDate: string): Promise<DefaultTimeEntry[]> => {
+  const response = await apiClient.post<ApiResponse<DefaultTimeEntry[]>>('/timesheets/default-entries', {
+    weekStartDate,
+  });
+  return response.data.data || [];
+};
+
+/**
  * Get a specific timesheet by ID
  */
 export const getTimesheet = async (timesheetId: number): Promise<Timesheet> => {
@@ -51,10 +88,21 @@ export const getTimesheetForWeek = async (weekStartDate: string): Promise<Timesh
 
 /**
  * Get or create timesheet for a specific week
+ *
+ * When creating a new timesheet, auto-populates default entries based on the
+ * user's work week pattern (Monday-Friday or Tuesday-Saturday) unless
+ * skipDefaultEntries is true.
+ *
+ * @param weekStartDate - The Sunday start date of the week (YYYY-MM-DD)
+ * @param skipDefaultEntries - If true, skip auto-populating default entries (default: false)
  */
-export const getOrCreateTimesheetForWeek = async (weekStartDate: string): Promise<Timesheet> => {
+export const getOrCreateTimesheetForWeek = async (
+  weekStartDate: string,
+  skipDefaultEntries: boolean = false
+): Promise<Timesheet> => {
   const response = await apiClient.post<ApiResponse<Timesheet>>('/timesheets/week', {
     weekStartDate,
+    skipDefaultEntries,
   });
   return response.data.data;
 };

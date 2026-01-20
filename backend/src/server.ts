@@ -16,6 +16,7 @@ import dashboardRoutes from './routes/dashboardRoutes';
 import adminRoutes from './routes/adminRoutes';
 import importRoutes from './routes/importRoutes';
 import delegationRoutes from './routes/delegationRoutes';
+import { legacyImportRoutes, legacyImportAdminRoutes } from './routes/legacyImportRoutes';
 import { logger } from './utils/logger';
 import { connectDatabase } from './config/database';
 
@@ -72,6 +73,8 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin/import', importRoutes);
+app.use('/api/admin/legacy-import', legacyImportAdminRoutes);
+app.use('/api/legacy-import', legacyImportRoutes);
 app.use('/api/delegations', delegationRoutes);
 
 // 404 handler

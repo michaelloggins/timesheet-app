@@ -3,13 +3,15 @@
  */
 
 // User Types
+export type UserRole = 'Employee' | 'Manager' | 'TimesheetAdmin' | 'Leadership' | 'ProjectAdmin' | 'AuditReviewer';
+
 export interface User {
   UserID: number;
   EntraIDObjectID: string;
   Email: string;
   Name: string;
   DepartmentID: number;
-  Role: 'Employee' | 'Manager' | 'TimesheetAdmin' | 'Leadership';
+  Role: UserRole;
   ManagerEntraID?: string | null;
   IsActive: boolean;
   CreatedDate: Date;
@@ -29,10 +31,41 @@ export interface Project {
   ProjectID: number;
   ProjectNumber: string;
   ProjectName: string;
-  DepartmentID: number;
+  DepartmentID: number | null;
   ProjectType: 'Work' | 'PTO' | 'Holiday';
   GrantIdentifier?: string;
   IsActive: boolean;
+  CreatedDate: Date;
+  ModifiedDate?: Date;
+  DeactivatedDate?: Date;
+  DeactivatedReason?: string;
+}
+
+// Project with related department and employee assignments
+export interface ProjectWithAssignments extends Project {
+  DepartmentName?: string | null;
+  AssignedDepartments?: ProjectDepartment[];
+  AssignedEmployees?: ProjectEmployee[];
+}
+
+// Project-Department junction
+export interface ProjectDepartment {
+  ProjectDepartmentID: number;
+  ProjectID: number;
+  DepartmentID: number;
+  DepartmentName?: string;
+  CreatedDate: Date;
+}
+
+// Project-Employee junction
+export interface ProjectEmployee {
+  ProjectEmployeeID: number;
+  ProjectID: number;
+  UserID: number;
+  UserName?: string;
+  UserEmail?: string;
+  DepartmentID?: number;
+  DepartmentName?: string;
   CreatedDate: Date;
 }
 

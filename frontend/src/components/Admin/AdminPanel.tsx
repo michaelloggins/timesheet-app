@@ -3,7 +3,7 @@
  * Project, Department, and User Management
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Title2,
   Title3,
@@ -85,10 +85,12 @@ import { DepartmentFormModal } from './DepartmentFormModal';
 import { HolidayFormModal } from './HolidayFormModal';
 import { UserDetailsModal } from './UserDetailsModal';
 import { DelegationSettings } from '../Settings/DelegationSettings';
-import { Project } from '../../types';
-import { CreateProjectDto } from '../../services/projectService';
+import { LegacyImportAdmin } from './LegacyImportAdmin';
+import { Project, ProjectWithAssignments } from '../../types';
+import { CreateProjectDto, projectService } from '../../services/projectService';
 import { Department, CreateDepartmentDto } from '../../services/departmentService';
 import { Holiday, CreateHolidayDto } from '../../services/holidayService';
+import { useCurrentUser } from '../../hooks/useCurrentUser';
 
 const useStyles = makeStyles({
   container: {
@@ -212,9 +214,14 @@ const useStyles = makeStyles({
 
 export const AdminPanel = () => {
   const styles = useStyles();
+
+  // Get current user role permissions
+  const { isAdmin, isProjectAdmin, isAuditReviewer, user } = useCurrentUser();
+
   const [selectedTab, setSelectedTab] = useState<string>('projects');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const [editingProject, setEditingProject] = useState<ProjectWithAssignments | null>(null);
+  const [isLoadingProjectDetails, setIsLoadingProjectDetails] = useState(false);
   const [isDeptModalOpen, setIsDeptModalOpen] = useState(false);
   const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
   const [isHolidayModalOpen, setIsHolidayModalOpen] = useState(false);
@@ -224,6 +231,26 @@ export const AdminPanel = () => {
   const [auditLogType, setAuditLogType] = useState<'timesheet' | 'admin'>('admin');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isSyncResultsOpen, setIsSyncResultsOpen] = useState(false);
+  const [initialSetupDone, setInitialSetupDone] = useState(false);
+
+  // Set the initial tab and audit log type when user data is loaded
+  useEffect(() => {
+    if (user && !initialSetupDone) {
+      // Determine the default tab based on user role
+      if (isProjectAdmin) {
+        setSelectedTab('projects');
+      } else if (isAuditReviewer) {
+        setSelectedTab('audit');
+      }
+
+      // AuditReviewers who are not full admins only see timesheet activity
+      if (isAuditReviewer && !isAdmin) {
+        setAuditLogType('timesheet');
+      }
+
+      setInitialSetupDone(true);
+    }
+  }, [user, initialSetupDone, isAdmin, isProjectAdmin, isAuditReviewer]);
 
   // React Query hooks - Projects
   const { data: projects, isLoading: projectsLoading, error: projectsError } = useProjects();
@@ -255,9 +282,20 @@ export const AdminPanel = () => {
     setIsModalOpen(true);
   };
 
-  const handleEditProject = (project: Project) => {
-    setEditingProject(project);
+  const handleEditProject = async (project: Project) => {
+    setIsLoadingProjectDetails(true);
     setIsModalOpen(true);
+    try {
+      // Fetch project with full assignments (departments and employees)
+      const projectWithAssignments = await projectService.getProjectWithAssignments(project.projectId);
+      setEditingProject(projectWithAssignments);
+    } catch (error) {
+      console.error('Failed to fetch project details:', error);
+      // Fall back to basic project data
+      setEditingProject(project as ProjectWithAssignments);
+    } finally {
+      setIsLoadingProjectDetails(false);
+    }
   };
 
   const handleDeactivateProject = async (projectId: number) => {
@@ -363,16 +401,38 @@ export const AdminPanel = () => {
       </div>
 
       <TabList selectedValue={selectedTab} onTabSelect={(_, data) => setSelectedTab(data.value as string)}>
-        <Tab key="projects" value="projects">Projects</Tab>
-        <Tab key="departments" value="departments">Departments</Tab>
-        <Tab key="holidays" value="holidays">Holidays</Tab>
-        <Tab key="users" value="users">Users</Tab>
-        <Tab key="audit" value="audit" icon={<HistoryRegular />}>Audit Log</Tab>
-        <Tab key="settings" value="settings">Settings</Tab>
+        {/* Projects tab - visible to TimesheetAdmin, Leadership, and ProjectAdmin */}
+        {isProjectAdmin && (
+          <Tab key="projects" value="projects">Projects</Tab>
+        )}
+        {/* Departments tab - visible to TimesheetAdmin only */}
+        {isAdmin && (
+          <Tab key="departments" value="departments">Departments</Tab>
+        )}
+        {/* Holidays tab - visible to TimesheetAdmin only */}
+        {isAdmin && (
+          <Tab key="holidays" value="holidays">Holidays</Tab>
+        )}
+        {/* Users tab - visible to TimesheetAdmin only */}
+        {isAdmin && (
+          <Tab key="users" value="users">Users</Tab>
+        )}
+        {/* Audit tab - visible to TimesheetAdmin and AuditReviewer */}
+        {(isAdmin || isAuditReviewer) && (
+          <Tab key="audit" value="audit" icon={<HistoryRegular />}>Audit Log</Tab>
+        )}
+        {/* Settings tab - visible to TimesheetAdmin only */}
+        {isAdmin && (
+          <Tab key="settings" value="settings">Settings</Tab>
+        )}
+        {/* Legacy Import tab - visible to TimesheetAdmin only */}
+        {isAdmin && (
+          <Tab key="legacy-import" value="legacy-import" icon={<ArrowSyncRegular />}>Legacy Import</Tab>
+        )}
       </TabList>
 
       <div className={styles.tabContent}>
-        {selectedTab === 'projects' && (
+        {selectedTab === 'projects' && isProjectAdmin && (
           <>
             <div className={styles.header}>
               <Title3>Project Management</Title3>
@@ -478,14 +538,14 @@ export const AdminPanel = () => {
                 setEditingProject(null);
               }}
               onSubmit={handleSubmitProject}
-              project={editingProject}
+              project={isLoadingProjectDetails ? null : editingProject}
               departments={departments?.map(d => ({ departmentId: d.DepartmentID, departmentName: d.DepartmentName })) || []}
-              isLoading={createProject.isPending || updateProject.isPending}
+              isLoading={createProject.isPending || updateProject.isPending || isLoadingProjectDetails}
             />
           </>
         )}
 
-        {selectedTab === 'departments' && (
+        {selectedTab === 'departments' && isAdmin && (
           <>
             <div className={styles.header}>
               <Title3>Department Management</Title3>
@@ -589,7 +649,7 @@ export const AdminPanel = () => {
           </>
         )}
 
-        {selectedTab === 'holidays' && (
+        {selectedTab === 'holidays' && isAdmin && (
           <>
             <div className={styles.header}>
               <Title3>Holiday Management</Title3>
@@ -694,7 +754,7 @@ export const AdminPanel = () => {
           </>
         )}
 
-        {selectedTab === 'users' && (
+        {selectedTab === 'users' && isAdmin && (
           <>
             <div className={styles.header}>
               <Title3>User Management</Title3>
@@ -751,12 +811,13 @@ export const AdminPanel = () => {
                     <TableHeader>
                       <TableRow>
                         <TableHeaderCell style={{ width: '180px' }}>Name</TableHeaderCell>
-                        <TableHeaderCell style={{ width: '220px' }}>Email</TableHeaderCell>
-                        <TableHeaderCell style={{ width: '140px' }}>Department</TableHeaderCell>
-                        <TableHeaderCell style={{ width: '110px' }}>Role</TableHeaderCell>
-                        <TableHeaderCell style={{ width: '140px' }}>Manager</TableHeaderCell>
-                        <TableHeaderCell style={{ width: '80px' }}>Status</TableHeaderCell>
-                        <TableHeaderCell style={{ width: '100px' }}>Last Login</TableHeaderCell>
+                        <TableHeaderCell style={{ width: '200px' }}>Email</TableHeaderCell>
+                        <TableHeaderCell style={{ width: '130px' }}>Department</TableHeaderCell>
+                        <TableHeaderCell style={{ width: '100px' }}>Role</TableHeaderCell>
+                        <TableHeaderCell style={{ width: '80px' }}>Work Week</TableHeaderCell>
+                        <TableHeaderCell style={{ width: '130px' }}>Manager</TableHeaderCell>
+                        <TableHeaderCell style={{ width: '70px' }}>Status</TableHeaderCell>
+                        <TableHeaderCell style={{ width: '90px' }}>Last Login</TableHeaderCell>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -781,12 +842,17 @@ export const AdminPanel = () => {
                                 color={
                                   user.Role === 'TimesheetAdmin' ? 'danger' :
                                   user.Role === 'Manager' ? 'warning' :
-                                  user.Role === 'Leadership' ? 'important' : 'informative'
+                                  user.Role === 'Leadership' ? 'important' :
+                                  user.Role === 'ProjectAdmin' ? 'severe' :
+                                  user.Role === 'AuditReviewer' ? 'subtle' : 'informative'
                                 }
                                 className={styles.badge}
                               >
                                 {user.Role}
                               </Badge>
+                            </TableCell>
+                            <TableCell>
+                              {user.WorkWeekPattern === 'TuesdaySaturday' ? 'Tue-Sat' : 'Mon-Fri'}
                             </TableCell>
                             <TableCell className={styles.cellTruncate} title={user.ManagerName || '-'}>{user.ManagerName || '-'}</TableCell>
                             <TableCell>
@@ -809,7 +875,7 @@ export const AdminPanel = () => {
                         ))
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={7} style={{ textAlign: 'center', padding: '2rem' }}>
+                          <TableCell colSpan={8} style={{ textAlign: 'center', padding: '2rem' }}>
                             No users found. Click "Sync from Entra ID" to import users from security groups.
                           </TableCell>
                         </TableRow>
@@ -822,25 +888,30 @@ export const AdminPanel = () => {
           </>
         )}
 
-        {selectedTab === 'audit' && (
+        {selectedTab === 'audit' && (isAdmin || isAuditReviewer) && (
           <>
             <div className={styles.header}>
               <Title3>Audit Log</Title3>
             </div>
 
-            {/* Log Type Toggle */}
-            <TabList
-              selectedValue={auditLogType}
-              onTabSelect={(_, data) => setAuditLogType(data.value as 'timesheet' | 'admin')}
-              size="small"
-              style={{ marginBottom: tokens.spacingVerticalM }}
-            >
-              <Tab value="admin">Admin Actions</Tab>
-              <Tab value="timesheet">Timesheet Activity</Tab>
-            </TabList>
+            {/* Log Type Toggle - Only show both options if user is full admin */}
+            {isAdmin ? (
+              <TabList
+                selectedValue={auditLogType}
+                onTabSelect={(_, data) => setAuditLogType(data.value as 'timesheet' | 'admin')}
+                size="small"
+                style={{ marginBottom: tokens.spacingVerticalM }}
+              >
+                <Tab value="admin">Admin Actions</Tab>
+                <Tab value="timesheet">Timesheet Activity</Tab>
+              </TabList>
+            ) : (
+              /* AuditReviewer only sees Timesheet Activity - no toggle needed */
+              <Title3 style={{ marginBottom: tokens.spacingVerticalM }}>Timesheet Activity</Title3>
+            )}
 
-            {/* Admin Actions Log */}
-            {auditLogType === 'admin' && (
+            {/* Admin Actions Log - Only accessible to full admins */}
+            {auditLogType === 'admin' && isAdmin && (
               <>
                 <div className={styles.filters}>
                   <Field label="Time Period" className={styles.filterField}>
@@ -969,8 +1040,8 @@ export const AdminPanel = () => {
               </>
             )}
 
-            {/* Timesheet Activity Log */}
-            {auditLogType === 'timesheet' && (
+            {/* Timesheet Activity Log - Accessible to both admins and AuditReviewers */}
+            {(auditLogType === 'timesheet' || !isAdmin) && (
               <>
                 <div className={styles.filters}>
                   <Field label="Time Period" className={styles.filterField}>
@@ -1104,7 +1175,7 @@ export const AdminPanel = () => {
           </>
         )}
 
-        {selectedTab === 'settings' && (
+        {selectedTab === 'settings' && isAdmin && (
           <>
             <div className={styles.header}>
               <Title3>Delegation Settings</Title3>
@@ -1115,6 +1186,10 @@ export const AdminPanel = () => {
             </Text>
             <DelegationSettings embedded />
           </>
+        )}
+
+        {selectedTab === 'legacy-import' && isAdmin && (
+          <LegacyImportAdmin />
         )}
       </div>
 

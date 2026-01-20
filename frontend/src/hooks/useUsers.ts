@@ -15,11 +15,12 @@ export interface User {
   Title?: string;
   DepartmentID: number;
   DepartmentName?: string;
-  Role: 'Employee' | 'Manager' | 'TimesheetAdmin' | 'Leadership';
+  Role: 'Employee' | 'Manager' | 'TimesheetAdmin' | 'Leadership' | 'ProjectAdmin' | 'AuditReviewer';
   IsActive: boolean;
   ManagerEntraID?: string;
   ManagerName?: string;
   ManagerEmail?: string;
+  WorkWeekPattern?: 'MondayFriday' | 'TuesdaySaturday' | null;
   CreatedDate: string;
   LastLoginDate?: string;
   DeactivatedDate?: string;

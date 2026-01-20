@@ -6,6 +6,7 @@
 import { ReactNode } from 'react';
 import { makeStyles, tokens, shorthands } from '@fluentui/react-components';
 import { TopNavigation } from './TopNavigation';
+import { LegacyImportSync } from '../LegacyImport/LegacyImportSync';
 
 const useStyles = makeStyles({
   container: {
@@ -47,6 +48,8 @@ export const AppShell = ({ children }: AppShellProps) => {
 
   return (
     <div className={styles.container}>
+      {/* Background sync for legacy SharePoint data */}
+      <LegacyImportSync />
       <TopNavigation />
       <main className={styles.main}>
         <div className={styles.content}>{children}</div>

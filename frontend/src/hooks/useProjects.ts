@@ -4,7 +4,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { projectService, CreateProjectDto, UpdateProjectDto } from '../services/projectService';
-import { Project } from '../types';
+import { Project, TargetableEmployee } from '../types';
 
 export const PROJECTS_QUERY_KEY = 'projects';
 
@@ -29,6 +29,17 @@ export const useActiveProjects = () => {
 };
 
 /**
+ * Get projects accessible to the current user
+ * Based on department assignment or direct employee targeting
+ */
+export const useProjectsForUser = () => {
+  return useQuery({
+    queryKey: [PROJECTS_QUERY_KEY, 'forUser'],
+    queryFn: projectService.getProjectsForUser,
+  });
+};
+
+/**
  * Get project by ID
  */
 export const useProject = (id: number) => {
@@ -36,6 +47,28 @@ export const useProject = (id: number) => {
     queryKey: [PROJECTS_QUERY_KEY, id],
     queryFn: () => projectService.getProjectById(id),
     enabled: !!id,
+  });
+};
+
+/**
+ * Get project by ID with full assignments (departments and employees)
+ */
+export const useProjectWithAssignments = (id: number | null) => {
+  return useQuery({
+    queryKey: [PROJECTS_QUERY_KEY, id, 'assignments'],
+    queryFn: () => projectService.getProjectWithAssignments(id!),
+    enabled: !!id,
+  });
+};
+
+/**
+ * Get employees from specified departments (for employee targeting UI)
+ */
+export const useEmployeesByDepartments = (departmentIds: number[]) => {
+  return useQuery<TargetableEmployee[]>({
+    queryKey: [PROJECTS_QUERY_KEY, 'employeesByDepartments', departmentIds],
+    queryFn: () => projectService.getEmployeesByDepartments(departmentIds),
+    enabled: departmentIds.length > 0,
   });
 };
 

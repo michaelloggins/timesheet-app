@@ -5,6 +5,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../services/api';
+import { UserRole } from '../types';
 
 export interface CurrentUser {
   userId: number;
@@ -14,7 +15,7 @@ export interface CurrentUser {
   departmentId: number;
   departmentName?: string;
   managerName?: string;
-  role: 'Employee' | 'Manager' | 'TimesheetAdmin' | 'Leadership';
+  role: UserRole;
 }
 
 async function fetchProfile(): Promise<CurrentUser> {
@@ -30,12 +31,21 @@ export const useCurrentUser = () => {
     retry: 1,
   });
 
+  // Role helper functions
+  const role = data?.role;
+
   return {
     user: data,
     isLoading,
     error: error as Error | null,
-    isManager: data?.role === 'Manager' || data?.role === 'TimesheetAdmin' || data?.role === 'Leadership',
-    isAdmin: data?.role === 'TimesheetAdmin' || data?.role === 'Leadership',
-    isLeadership: data?.role === 'Leadership',
+    // Existing role checks
+    isManager: role === 'Manager' || role === 'TimesheetAdmin' || role === 'Leadership',
+    isAdmin: role === 'TimesheetAdmin' || role === 'Leadership',
+    isLeadership: role === 'Leadership',
+    // New role checks for granular admin access
+    isProjectAdmin: role === 'TimesheetAdmin' || role === 'ProjectAdmin',
+    isAuditReviewer: role === 'TimesheetAdmin' || role === 'AuditReviewer',
+    // Check if user has any admin panel access
+    hasAdminAccess: role === 'TimesheetAdmin' || role === 'Leadership' || role === 'ProjectAdmin' || role === 'AuditReviewer',
   };
 };

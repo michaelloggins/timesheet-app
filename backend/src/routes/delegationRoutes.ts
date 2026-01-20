@@ -28,8 +28,20 @@ router.get('/direct-reports', delegationController.getDirectReports);
 // Get a specific delegation by ID
 router.get('/:id', delegationController.getDelegation);
 
+// Get scoped employees for a delegation
+router.get('/:id/employees', delegationController.getScopedEmployees);
+
 // Create a new delegation
 router.post('/', delegationController.createDelegation);
+
+// Update an existing delegation
+router.put('/:id', delegationController.updateDelegation);
+
+// Add employees to a delegation's scope
+router.post('/:id/employees', delegationController.addEmployees);
+
+// Remove employees from a delegation's scope
+router.delete('/:id/employees', delegationController.removeEmployees);
 
 // Revoke/cancel a delegation
 router.delete('/:id', delegationController.revokeDelegation);

@@ -81,9 +81,17 @@ interface DepartmentConflict {
   departments: string[];
 }
 
-type UserRole = 'Employee' | 'Manager' | 'TimesheetAdmin' | 'Leadership';
+type UserRole = 'Employee' | 'Manager' | 'TimesheetAdmin' | 'Leadership' | 'ProjectAdmin' | 'AuditReviewer';
 
 const DEPARTMENT_GROUP_PREFIX = 'SG-MVD-Dept';
+
+// Role-based security group names (configurable via env vars)
+const ROLE_GROUPS = {
+  TimesheetAdmin: process.env.ENTRA_GROUP_TIMESHEET_ADMIN || 'SG-MVD-Timesheet-TimesheetAdmin',
+  Leadership: process.env.ENTRA_GROUP_LEADERSHIP || 'SG-MVD-Timesheet-Leadership',
+  ProjectAdmin: process.env.ENTRA_GROUP_PROJECT_ADMIN || 'SG-MVD-Timesheet-ProjectAdmin',
+  AuditReviewer: process.env.ENTRA_GROUP_AUDIT_REVIEWER || 'SG-MVD-Timesheet-AuditReviewer',
+} as const;
 
 class UserSyncService {
   private graphClient: Client;
@@ -206,6 +214,90 @@ class UserSyncService {
       logger.warn(`Could not get manager for user ${userId}:`, error.message);
       return null;
     }
+  }
+
+  /**
+   * Check if user is in a specific role-based security group
+   * Supports nested groups (transitive membership)
+   * Uses group display name to find and check membership
+   */
+  private async isUserInRoleGroup(userEntraId: string, groupDisplayName: string): Promise<boolean> {
+    try {
+      // Find the group by display name
+      const groupResponse = await this.graphClient
+        .api('/groups')
+        .filter(`displayName eq '${groupDisplayName}'`)
+        .select('id')
+        .get();
+
+      if (!groupResponse.value || groupResponse.value.length === 0) {
+        // Group doesn't exist - not an error, just means this role isn't configured
+        return false;
+      }
+
+      const groupId = groupResponse.value[0].id;
+
+      // Check transitive membership (supports nested groups)
+      // Uses checkMemberGroups API which checks if user is member directly or via nested groups
+      try {
+        const membershipCheck = await this.graphClient
+          .api(`/users/${userEntraId}/checkMemberGroups`)
+          .post({
+            groupIds: [groupId]
+          });
+
+        // Returns array of group IDs the user is a member of (from the provided list)
+        return membershipCheck.value && membershipCheck.value.includes(groupId);
+      } catch (error: any) {
+        // Fallback to direct membership check if checkMemberGroups fails
+        logger.warn(`checkMemberGroups failed for role check, falling back to direct check: ${error.message}`);
+        try {
+          await this.graphClient
+            .api(`/groups/${groupId}/members/${userEntraId}`)
+            .get();
+          return true;
+        } catch (fallbackError: any) {
+          if (fallbackError.statusCode === 404) {
+            return false;
+          }
+          throw fallbackError;
+        }
+      }
+    } catch (error: any) {
+      logger.warn(`Error checking role group '${groupDisplayName}' for user ${userEntraId}:`, error.message);
+      return false;
+    }
+  }
+
+  /**
+   * Determine user's role based on security group membership
+   * Role hierarchy (highest to lowest):
+   * TimesheetAdmin > Leadership > ProjectAdmin > AuditReviewer > Manager > Employee
+   */
+  private async determineUserRole(userEntraId: string, baseRole: UserRole): Promise<UserRole> {
+    // Check role groups in hierarchy order (highest first)
+    // TimesheetAdmin is the highest role
+    if (await this.isUserInRoleGroup(userEntraId, ROLE_GROUPS.TimesheetAdmin)) {
+      return 'TimesheetAdmin';
+    }
+
+    // Leadership is second highest
+    if (await this.isUserInRoleGroup(userEntraId, ROLE_GROUPS.Leadership)) {
+      return 'Leadership';
+    }
+
+    // ProjectAdmin
+    if (await this.isUserInRoleGroup(userEntraId, ROLE_GROUPS.ProjectAdmin)) {
+      return 'ProjectAdmin';
+    }
+
+    // AuditReviewer
+    if (await this.isUserInRoleGroup(userEntraId, ROLE_GROUPS.AuditReviewer)) {
+      return 'AuditReviewer';
+    }
+
+    // Fall back to the base role from the primary role groups (Manager/Employee)
+    return baseRole;
   }
 
   /**
@@ -482,12 +574,16 @@ class UserSyncService {
     const conflicts: DepartmentConflict[] = [];
 
     // Process each user
-    for (const [entraId, { user, role }] of userRoleMap) {
+    for (const [entraId, { user, role: baseRole }] of userRoleMap) {
       seenEntraIds.add(entraId);
 
       try {
         // Get manager
         const managerEntraId = await this.getUserManager(entraId);
+
+        // Determine final role based on specialized security groups
+        // This checks TimesheetAdmin, Leadership, ProjectAdmin, AuditReviewer groups
+        const role = await this.determineUserRole(entraId, baseRole);
 
         // Get department from group membership
         let departmentId: number | null = null;

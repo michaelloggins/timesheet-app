@@ -7,13 +7,15 @@ import { getUserByEntraId, updateLastLogin } from '../repositories/userRepositor
 // Initialize passport
 passport.use(bearerStrategy);
 
+export type UserRole = 'Employee' | 'Manager' | 'TimesheetAdmin' | 'Leadership' | 'ProjectAdmin' | 'AuditReviewer';
+
 export interface AuthUser {
   userId: number;
   entraId: string;
   email: string;
   name: string;
   departmentId: number;
-  role: 'Employee' | 'Manager' | 'TimesheetAdmin' | 'Leadership';
+  role: UserRole;
   managerEntraId: string | null;
 }
 
@@ -91,3 +93,10 @@ export const requireRole = (allowedRoles: string[]) => {
 export const requireManager = requireRole(['Manager', 'TimesheetAdmin', 'Leadership']);
 export const requireAdmin = requireRole(['TimesheetAdmin']);
 export const requireLeadership = requireRole(['Leadership', 'TimesheetAdmin']);
+
+// New role-specific middleware
+export const requireProjectAdmin = requireRole(['TimesheetAdmin', 'ProjectAdmin']);
+export const requireAuditReviewer = requireRole(['TimesheetAdmin', 'AuditReviewer']);
+
+// Combined access for admin panel sections
+export const requireAnyAdminAccess = requireRole(['TimesheetAdmin', 'Leadership', 'ProjectAdmin', 'AuditReviewer']);

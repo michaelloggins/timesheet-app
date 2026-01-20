@@ -3,13 +3,15 @@
  */
 
 // User Types
+export type UserRole = 'Employee' | 'Manager' | 'TimesheetAdmin' | 'Leadership' | 'ProjectAdmin' | 'AuditReviewer';
+
 export interface User {
   userId: number;
   entraId: string;
   email: string;
   name: string;
   departmentId: number;
-  role: 'Employee' | 'Manager' | 'TimesheetAdmin' | 'Leadership';
+  role: UserRole;
 }
 
 // Department Types
@@ -30,6 +32,40 @@ export interface Project {
   projectType: 'Work' | 'PTO' | 'Holiday';
   grantIdentifier?: string;
   isActive: boolean;
+}
+
+// Project with department and employee assignments (for admin UI)
+export interface ProjectWithAssignments extends Project {
+  assignedDepartments?: ProjectDepartment[];
+  assignedEmployees?: ProjectEmployee[];
+}
+
+// Project-Department junction
+export interface ProjectDepartment {
+  projectDepartmentId: number;
+  projectId: number;
+  departmentId: number;
+  departmentName?: string;
+}
+
+// Project-Employee junction
+export interface ProjectEmployee {
+  projectEmployeeId: number;
+  projectId: number;
+  userId: number;
+  userName?: string;
+  userEmail?: string;
+  departmentId?: number;
+  departmentName?: string;
+}
+
+// Employee info for project targeting
+export interface TargetableEmployee {
+  userId: number;
+  name: string;
+  email: string;
+  departmentId: number;
+  departmentName: string;
 }
 
 // Timesheet Types

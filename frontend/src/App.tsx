@@ -9,6 +9,22 @@ import { ApprovalsList } from '@components/Approvals/ApprovalsList';
 import { Scoreboard } from '@components/Scoreboard/Scoreboard';
 import { Reports } from '@components/Reports/Reports';
 import { AdminPanel } from '@components/Admin/AdminPanel';
+import { useCurrentUser } from './hooks/useCurrentUser';
+
+// Protected admin route component
+function ProtectedAdminRoute() {
+  const { hasAdminAccess, isLoading } = useCurrentUser();
+
+  if (isLoading) {
+    return null; // Or a loading spinner
+  }
+
+  if (!hasAdminAccess) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <AdminPanel />;
+}
 
 function App() {
   const isAuthenticated = useIsAuthenticated();
@@ -27,7 +43,7 @@ function App() {
         <Route path="/approvals" element={<ApprovalsList />} />
         <Route path="/scoreboard" element={<Scoreboard />} />
         <Route path="/reports" element={<Reports />} />
-        <Route path="/admin" element={<AdminPanel />} />
+        <Route path="/admin" element={<ProtectedAdminRoute />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AppShell>

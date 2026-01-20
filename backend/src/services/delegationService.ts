@@ -501,10 +501,294 @@ export const canApproveOnBehalfOf = async (
   return result.recordset[0].count > 0;
 };
 
+export interface UpdateDelegationInput {
+  delegationId: number;
+  employeeIds?: number[];  // Updated list of scoped employees (empty array = clear scoping)
+  endDate?: Date;          // Can extend or shorten end date
+  reason?: string;         // Can update reason
+}
+
+/**
+ * Update an existing delegation
+ * Only the delegator or a TimesheetAdmin can update a delegation
+ */
+export const updateDelegation = async (
+  input: UpdateDelegationInput,
+  userId: number,
+  userRole: string
+): Promise<DelegationWithNames> => {
+  const { delegationId, employeeIds, endDate, reason } = input;
+  const pool = getPool();
+
+  // Get the delegation
+  const delegationResult = await pool.request()
+    .input('delegationId', delegationId)
+    .query(`
+      SELECT d.*,
+        delegator.Name as DelegatorName,
+        delegator.Email as DelegatorEmail,
+        delegate.Name as DelegateName,
+        delegate.Email as DelegateEmail,
+        delegator.EntraIDObjectID as DelegatorEntraID
+      FROM ApprovalDelegation d
+      INNER JOIN Users delegator ON d.DelegatorUserID = delegator.UserID
+      INNER JOIN Users delegate ON d.DelegateUserID = delegate.UserID
+      WHERE d.DelegationID = @delegationId
+    `);
+
+  if (delegationResult.recordset.length === 0) {
+    throw new AppError(404, 'Delegation not found');
+  }
+
+  const delegation = delegationResult.recordset[0];
+
+  if (!delegation.IsActive) {
+    throw new AppError(400, 'Cannot update a revoked delegation');
+  }
+
+  // Authorization: Only the delegator or an admin can update
+  const isAdmin = userRole === 'TimesheetAdmin';
+  const isDelegator = delegation.DelegatorUserID === userId;
+
+  if (!isAdmin && !isDelegator) {
+    throw new AppError(403, 'Only the delegator or an admin can update this delegation');
+  }
+
+  // Update end date if provided
+  if (endDate !== undefined) {
+    const newEndDate = new Date(endDate);
+    newEndDate.setHours(0, 0, 0, 0);
+    const startDate = new Date(delegation.StartDate);
+    startDate.setHours(0, 0, 0, 0);
+
+    if (newEndDate < startDate) {
+      throw new AppError(400, 'End date cannot be before start date');
+    }
+
+    await pool.request()
+      .input('delegationId', delegationId)
+      .input('endDate', newEndDate)
+      .query(`
+        UPDATE ApprovalDelegation
+        SET EndDate = @endDate
+        WHERE DelegationID = @delegationId
+      `);
+  }
+
+  // Update reason if provided
+  if (reason !== undefined) {
+    await pool.request()
+      .input('delegationId', delegationId)
+      .input('reason', reason || null)
+      .query(`
+        UPDATE ApprovalDelegation
+        SET Reason = @reason
+        WHERE DelegationID = @delegationId
+      `);
+  }
+
+  // Update scoped employees if provided
+  if (employeeIds !== undefined) {
+    // Validate employees if any are specified
+    if (employeeIds.length > 0) {
+      // Get valid employee IDs (direct reports of the delegator)
+      const orgCheck = await pool.request()
+        .input('delegatorEntraId', delegation.DelegatorEntraID)
+        .query(`
+          SELECT UserID FROM Users
+          WHERE ManagerEntraID = @delegatorEntraId
+            AND IsActive = 1
+        `);
+
+      const validEmployeeIds = new Set(orgCheck.recordset.map((r: { UserID: number }) => r.UserID));
+      const invalidEmployees = employeeIds.filter(id => !validEmployeeIds.has(id));
+
+      if (invalidEmployees.length > 0) {
+        throw new AppError(400, 'Some employees are not in the delegator\'s direct reports');
+      }
+    }
+
+    // Delete existing scoped employees
+    await pool.request()
+      .input('delegationId', delegationId)
+      .query('DELETE FROM DelegationEmployees WHERE DelegationID = @delegationId');
+
+    // Insert new scoped employees
+    for (const employeeId of employeeIds) {
+      await pool.request()
+        .input('delegationId', delegationId)
+        .input('employeeId', employeeId)
+        .query(`
+          INSERT INTO DelegationEmployees (DelegationID, EmployeeUserID)
+          VALUES (@delegationId, @employeeId)
+        `);
+    }
+
+    logger.info(`Delegation ${delegationId} scoped employees updated to ${employeeIds.length} employees`);
+  }
+
+  // Log the update
+  await logDelegationAudit({
+    delegationId,
+    action: 'UPDATED',
+    actionByUserId: userId,
+    delegatorId: delegation.DelegatorUserID,
+    delegateId: delegation.DelegateUserID,
+    startDate: delegation.StartDate,
+    endDate: endDate || delegation.EndDate,
+    reason: reason !== undefined ? reason : delegation.Reason,
+  });
+
+  logger.info(`Delegation ${delegationId} updated by user ${userId}`);
+
+  // Return the updated delegation
+  const updatedDelegation = await getDelegationById(delegationId);
+  if (!updatedDelegation) {
+    throw new AppError(500, 'Failed to retrieve updated delegation');
+  }
+
+  // Add scoped employees
+  updatedDelegation.ScopedEmployees = await getScopedEmployees(delegationId);
+
+  return updatedDelegation;
+};
+
+/**
+ * Add employees to a delegation's scope
+ */
+export const addEmployeesToDelegation = async (
+  delegationId: number,
+  employeeIds: number[],
+  userId: number,
+  userRole: string
+): Promise<ScopedEmployee[]> => {
+  const pool = getPool();
+
+  // Get the delegation and verify authorization
+  const delegationResult = await pool.request()
+    .input('delegationId', delegationId)
+    .query(`
+      SELECT d.*, delegator.EntraIDObjectID as DelegatorEntraID
+      FROM ApprovalDelegation d
+      INNER JOIN Users delegator ON d.DelegatorUserID = delegator.UserID
+      WHERE d.DelegationID = @delegationId
+    `);
+
+  if (delegationResult.recordset.length === 0) {
+    throw new AppError(404, 'Delegation not found');
+  }
+
+  const delegation = delegationResult.recordset[0];
+
+  if (!delegation.IsActive) {
+    throw new AppError(400, 'Cannot modify a revoked delegation');
+  }
+
+  // Authorization
+  const isAdmin = userRole === 'TimesheetAdmin';
+  const isDelegator = delegation.DelegatorUserID === userId;
+
+  if (!isAdmin && !isDelegator) {
+    throw new AppError(403, 'Only the delegator or an admin can modify this delegation');
+  }
+
+  // Validate employees are direct reports
+  const orgCheck = await pool.request()
+    .input('delegatorEntraId', delegation.DelegatorEntraID)
+    .query(`
+      SELECT UserID FROM Users
+      WHERE ManagerEntraID = @delegatorEntraId
+        AND IsActive = 1
+    `);
+
+  const validEmployeeIds = new Set(orgCheck.recordset.map((r: { UserID: number }) => r.UserID));
+  const invalidEmployees = employeeIds.filter(id => !validEmployeeIds.has(id));
+
+  if (invalidEmployees.length > 0) {
+    throw new AppError(400, 'Some employees are not in the delegator\'s direct reports');
+  }
+
+  // Get existing scoped employees
+  const existingResult = await pool.request()
+    .input('delegationId', delegationId)
+    .query('SELECT EmployeeUserID FROM DelegationEmployees WHERE DelegationID = @delegationId');
+
+  const existingIds = new Set(existingResult.recordset.map((r: { EmployeeUserID: number }) => r.EmployeeUserID));
+
+  // Insert new employees (skip duplicates)
+  for (const employeeId of employeeIds) {
+    if (!existingIds.has(employeeId)) {
+      await pool.request()
+        .input('delegationId', delegationId)
+        .input('employeeId', employeeId)
+        .query(`
+          INSERT INTO DelegationEmployees (DelegationID, EmployeeUserID)
+          VALUES (@delegationId, @employeeId)
+        `);
+    }
+  }
+
+  logger.info(`Added ${employeeIds.length} employees to delegation ${delegationId}`);
+
+  return getScopedEmployees(delegationId);
+};
+
+/**
+ * Remove employees from a delegation's scope
+ */
+export const removeEmployeesFromDelegation = async (
+  delegationId: number,
+  employeeIds: number[],
+  userId: number,
+  userRole: string
+): Promise<ScopedEmployee[]> => {
+  const pool = getPool();
+
+  // Get the delegation and verify authorization
+  const delegationResult = await pool.request()
+    .input('delegationId', delegationId)
+    .query(`
+      SELECT * FROM ApprovalDelegation WHERE DelegationID = @delegationId
+    `);
+
+  if (delegationResult.recordset.length === 0) {
+    throw new AppError(404, 'Delegation not found');
+  }
+
+  const delegation = delegationResult.recordset[0];
+
+  if (!delegation.IsActive) {
+    throw new AppError(400, 'Cannot modify a revoked delegation');
+  }
+
+  // Authorization
+  const isAdmin = userRole === 'TimesheetAdmin';
+  const isDelegator = delegation.DelegatorUserID === userId;
+
+  if (!isAdmin && !isDelegator) {
+    throw new AppError(403, 'Only the delegator or an admin can modify this delegation');
+  }
+
+  // Remove employees
+  for (const employeeId of employeeIds) {
+    await pool.request()
+      .input('delegationId', delegationId)
+      .input('employeeId', employeeId)
+      .query(`
+        DELETE FROM DelegationEmployees
+        WHERE DelegationID = @delegationId AND EmployeeUserID = @employeeId
+      `);
+  }
+
+  logger.info(`Removed ${employeeIds.length} employees from delegation ${delegationId}`);
+
+  return getScopedEmployees(delegationId);
+};
+
 // Audit logging for delegations
 interface DelegationAuditEntry {
   delegationId: number;
-  action: 'CREATED' | 'REVOKED';
+  action: 'CREATED' | 'REVOKED' | 'UPDATED';
   actionByUserId: number;
   delegatorId: number;
   delegateId: number;

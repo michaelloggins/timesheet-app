@@ -10,10 +10,16 @@ router.use(authenticate);
 // Get current user's timesheets
 router.get('/my', timesheetController.getUserTimesheets);
 
+// Get user's work week pattern info (based on Entra ID security groups)
+router.get('/work-week', timesheetController.getWorkWeekInfo);
+
+// Preview default entries for a specific week
+router.post('/default-entries', timesheetController.getDefaultEntries);
+
 // Get timesheet for a specific week (returns null if doesn't exist)
 router.get('/week/:startDate', timesheetController.getTimesheetForWeek);
 
-// Get or create timesheet for a specific week
+// Get or create timesheet for a specific week (auto-populates default entries on creation)
 router.post('/week', timesheetController.getOrCreateTimesheetForWeek);
 
 // Get specific timesheet by ID

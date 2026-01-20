@@ -35,7 +35,7 @@ CREATE TABLE Users (
     LastLoginDate DATETIME2 NULL,
     CONSTRAINT FK_Users_Department FOREIGN KEY (DepartmentID)
         REFERENCES Departments(DepartmentID),
-    CONSTRAINT CHK_Users_Role CHECK (Role IN ('Employee', 'Manager', 'TimesheetAdmin', 'Leadership'))
+    CONSTRAINT CHK_Users_Role CHECK (Role IN ('Employee', 'Manager', 'TimesheetAdmin', 'Leadership', 'ProjectAdmin', 'AuditReviewer'))
 );
 
 -- =============================================

@@ -115,8 +115,10 @@ export const useTimesheet = (options: UseTimesheetOptions = {}) => {
   });
 
   // Mutation to create timesheet when needed (for lazy create mode)
+  // When using lazyCreate, we skip auto-populating default entries since
+  // the user is explicitly adding their own entry
   const createTimesheetMutation = useMutation({
-    mutationFn: () => getOrCreateTimesheetForWeek(formatDate(weekStart)),
+    mutationFn: () => getOrCreateTimesheetForWeek(formatDate(weekStart), lazyCreate),
     onSuccess: (data) => {
       queryClient.setQueryData(['timesheet', formatDate(weekStart), lazyCreate], data);
       queryClient.invalidateQueries({ queryKey: ['timesheets'] });

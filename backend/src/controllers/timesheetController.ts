@@ -3,6 +3,7 @@ import { asyncHandler } from '../middleware/errorHandler';
 import { getPool } from '../config/database';
 import { logger } from '../utils/logger';
 import { logAuditEntry } from '../utils/auditLogger';
+import { workWeekService } from '../services/workWeekService';
 
 /**
  * Get current user's timesheets
@@ -151,11 +152,15 @@ export const getTimesheetForWeek = asyncHandler(async (req: Request, res: Respon
 /**
  * Get or create timesheet for a specific week
  * POST /api/timesheets/week
+ *
+ * When creating a new timesheet, auto-populates default entries based on
+ * the user's work week pattern (Monday-Friday or Tuesday-Saturday).
  */
 export const getOrCreateTimesheetForWeek = asyncHandler(async (req: Request, res: Response) => {
   const pool = getPool();
   const userId = req.user!.userId;
-  const { weekStartDate } = req.body;
+  const entraId = req.user!.entraId;
+  const { weekStartDate, skipDefaultEntries } = req.body;
 
   if (!weekStartDate) {
     res.status(400).json({ status: 'error', message: 'weekStartDate is required' });
@@ -168,7 +173,7 @@ export const getOrCreateTimesheetForWeek = asyncHandler(async (req: Request, res
   endDate.setDate(startDate.getDate() + 6);
 
   // Check if timesheet exists
-  let result = await pool.request()
+  const result = await pool.request()
     .input('userId', userId)
     .input('startDate', startDate)
     .query(`
@@ -193,6 +198,40 @@ export const getOrCreateTimesheetForWeek = asyncHandler(async (req: Request, res
       `);
     timesheetId = insertResult.recordset[0].TimesheetID;
     logger.info(`Created new timesheet ${timesheetId} for user ${userId}`);
+
+    // Auto-populate default entries based on user's work week pattern
+    // Skip if explicitly requested (e.g., for lazy create mode)
+    if (!skipDefaultEntries) {
+      try {
+        const defaultEntries = await workWeekService.generateDefaultEntries(
+          entraId,
+          weekStartDate
+        );
+
+        if (defaultEntries.length > 0) {
+          logger.info(
+            `Auto-populating ${defaultEntries.length} default entries for timesheet ${timesheetId}`
+          );
+
+          for (const entry of defaultEntries) {
+            await pool.request()
+              .input('timesheetId', timesheetId)
+              .input('userId', userId)
+              .input('projectId', entry.projectId)
+              .input('workDate', new Date(entry.workDate))
+              .input('hours', entry.hoursWorked)
+              .input('location', entry.workLocation)
+              .query(`
+                INSERT INTO TimeEntries (TimesheetID, UserID, ProjectID, WorkDate, HoursWorked, WorkLocation)
+                VALUES (@timesheetId, @userId, @projectId, @workDate, @hours, @location)
+              `);
+          }
+        }
+      } catch (error) {
+        // Log error but don't fail the timesheet creation
+        logger.error(`Error auto-populating default entries for timesheet ${timesheetId}:`, error);
+      }
+    }
   }
 
   // Fetch the complete timesheet
@@ -767,4 +806,58 @@ export const bulkAddEntries = asyncHandler(async (req: Request, res: Response) =
   }
 
   res.status(201).json({ status: 'success', message: `${entries.length} entries added` });
+});
+
+/**
+ * Get user's work week pattern info
+ * GET /api/timesheets/work-week
+ *
+ * Returns the user's work week pattern based on Entra ID security group membership:
+ * - MondayFriday: Default 8 hours Mon-Fri (SG-MVD-Timesheet-WorkWeekMF)
+ * - TuesdaySaturday: Default 8 hours Tue-Sat (SG-MVD-Timesheet-WorkWeekTS)
+ */
+export const getWorkWeekInfo = asyncHandler(async (req: Request, res: Response) => {
+  const entraId = req.user!.entraId;
+
+  const workWeekInfo = await workWeekService.getWorkWeekInfo(entraId);
+
+  res.status(200).json({
+    status: 'success',
+    data: {
+      pattern: workWeekInfo.pattern,
+      workDays: workWeekInfo.workDays,
+      defaultHoursPerDay: workWeekInfo.defaultHoursPerDay,
+      defaultProjectId: workWeekInfo.defaultProjectId,
+      // Human-readable description
+      description: workWeekInfo.pattern === 'MondayFriday'
+        ? 'Monday through Friday (8 hours/day)'
+        : 'Tuesday through Saturday (8 hours/day)',
+    },
+  });
+});
+
+/**
+ * Generate default entries for a specific week
+ * POST /api/timesheets/default-entries
+ *
+ * Body: { weekStartDate: 'YYYY-MM-DD' }
+ *
+ * Returns default time entries based on user's work week pattern.
+ * Useful for previewing what entries would be auto-created.
+ */
+export const getDefaultEntries = asyncHandler(async (req: Request, res: Response) => {
+  const entraId = req.user!.entraId;
+  const { weekStartDate } = req.body;
+
+  if (!weekStartDate) {
+    res.status(400).json({ status: 'error', message: 'weekStartDate is required' });
+    return;
+  }
+
+  const defaultEntries = await workWeekService.generateDefaultEntries(entraId, weekStartDate);
+
+  res.status(200).json({
+    status: 'success',
+    data: defaultEntries,
+  });
 });
