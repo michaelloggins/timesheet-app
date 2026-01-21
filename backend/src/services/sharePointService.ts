@@ -232,8 +232,19 @@ class SharePointService {
       logger.info(`Fetched ${items.length} items from SharePoint list`);
       return items;
     } catch (error: any) {
-      logger.error(`Failed to fetch items from list ${listId}:`, error);
-      throw new Error(`Failed to fetch SharePoint list items: ${error.message}`);
+      // Log detailed Graph API error information
+      logger.error(`Failed to fetch items from list ${listId}:`, {
+        message: error.message,
+        code: error.code,
+        statusCode: error.statusCode,
+        body: error.body,
+        requestId: error.requestId,
+        stack: error.stack?.substring(0, 500),
+      });
+
+      // Include more details in the thrown error
+      const details = error.code || error.statusCode || 'Unknown error';
+      throw new Error(`Failed to fetch SharePoint list items: ${error.message} (${details})`);
     }
   }
 

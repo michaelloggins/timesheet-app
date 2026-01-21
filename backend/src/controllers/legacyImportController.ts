@@ -323,11 +323,16 @@ export const previewItems = asyncHandler(async (req: Request, res: Response) => 
       },
     });
   } catch (error: any) {
-    logger.error('Preview items error:', error);
+    logger.error('Preview items error:', {
+      message: error.message,
+      code: error.code,
+      statusCode: error.statusCode,
+      name: error.name,
+    });
     res.status(500).json({
       status: 'error',
       message: error.message || 'Failed to preview SharePoint items',
-      details: error.code || error.statusCode || 'Unknown error',
+      details: error.code || error.statusCode || error.name || 'Unknown error',
     });
   }
 });
