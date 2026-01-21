@@ -15,6 +15,7 @@ import type {
   LegacyImportConfig,
   SharePointListInfo,
   SharePointColumnInfo,
+  BatchLogData,
 } from '../services/legacyImportService';
 
 // Query keys
@@ -24,6 +25,7 @@ export const LEGACY_IMPORT_KEYS = {
   failed: ['legacy-import', 'failed'] as const,
   preview: ['legacy-import', 'preview'] as const,
   autoSyncCheck: ['legacy-import', 'auto-sync-check'] as const,
+  batchLog: (batchId: number) => ['legacy-import', 'batch-log', batchId] as const,
 };
 
 /**
@@ -68,6 +70,18 @@ export const useImportPreview = (enabled: boolean = true) => {
     queryFn: () => legacyImportService.previewImport(),
     enabled,
     staleTime: 1000 * 60, // Cache for 1 minute
+  });
+};
+
+/**
+ * Hook to get batch log details (admin only)
+ */
+export const useBatchLog = (batchId: number | null) => {
+  return useQuery<BatchLogData>({
+    queryKey: LEGACY_IMPORT_KEYS.batchLog(batchId || 0),
+    queryFn: () => legacyImportService.getBatchLog(batchId!),
+    enabled: batchId !== null,
+    staleTime: 1000 * 30,
   });
 };
 

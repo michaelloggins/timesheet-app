@@ -47,6 +47,7 @@ import {
   SettingsRegular,
   InfoRegular,
   ArrowDownloadRegular,
+  DocumentRegular,
 } from '@fluentui/react-icons';
 import {
   useLegacyImportStatus,
@@ -54,6 +55,7 @@ import {
   useRunManualImport,
   useUpdateLegacyImportConfig,
   useImportPreview,
+  useBatchLog,
 } from '../../hooks/useLegacyImport';
 
 const useStyles = makeStyles({
@@ -154,6 +156,7 @@ export const LegacyImportAdmin = () => {
   // State
   const [showConfig, setShowConfig] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [showBatchLog, setShowBatchLog] = useState<number | null>(null);
   const [configSiteId, setConfigSiteId] = useState('');
   const [configListId, setConfigListId] = useState('');
 
@@ -167,6 +170,9 @@ export const LegacyImportAdmin = () => {
 
   // Preview query (only when dialog is open)
   const { data: previewData, isLoading: previewLoading } = useImportPreview(showPreview);
+
+  // Batch log query (only when viewing a specific batch)
+  const { data: batchLogData, isLoading: batchLogLoading } = useBatchLog(showBatchLog);
 
   const handleRunImport = async () => {
     await runImport.mutateAsync();
@@ -429,6 +435,7 @@ export const LegacyImportAdmin = () => {
                     <TableHeaderCell style={{ width: '80px' }}>Total</TableHeaderCell>
                     <TableHeaderCell style={{ width: '80px' }}>Imported</TableHeaderCell>
                     <TableHeaderCell style={{ width: '80px' }}>Failed</TableHeaderCell>
+                    <TableHeaderCell style={{ width: '80px' }}>Actions</TableHeaderCell>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -463,11 +470,21 @@ export const LegacyImportAdmin = () => {
                         <TableCell style={{ color: batch.failedItems > 0 ? tokens.colorPaletteRedForeground1 : undefined }}>
                           {batch.failedItems}
                         </TableCell>
+                        <TableCell>
+                          <Button
+                            size="small"
+                            appearance="subtle"
+                            icon={<DocumentRegular />}
+                            onClick={() => setShowBatchLog(batch.batchId)}
+                          >
+                            View Log
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={7} style={{ textAlign: 'center', padding: '2rem' }}>
+                      <TableCell colSpan={8} style={{ textAlign: 'center', padding: '2rem' }}>
                         No import history found.
                       </TableCell>
                     </TableRow>
@@ -600,6 +617,144 @@ export const LegacyImportAdmin = () => {
             </DialogContent>
             <DialogActions>
               <Button appearance="primary" onClick={() => setShowPreview(false)}>
+                Close
+              </Button>
+            </DialogActions>
+          </DialogBody>
+        </DialogSurface>
+      </Dialog>
+
+      {/* Batch Log Dialog */}
+      <Dialog open={showBatchLog !== null} onOpenChange={(_, data) => !data.open && setShowBatchLog(null)}>
+        <DialogSurface style={{ maxWidth: '800px', width: '90vw' }}>
+          <DialogTitle>Import Batch Log - #{showBatchLog}</DialogTitle>
+          <DialogBody>
+            <DialogContent>
+              {batchLogLoading ? (
+                <Spinner label="Loading batch log..." />
+              ) : batchLogData ? (
+                <>
+                  {/* Batch Info */}
+                  <div style={{ marginBottom: tokens.spacingVerticalL }}>
+                    <Body1Strong>Batch Information</Body1Strong>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: tokens.spacingHorizontalM, marginTop: tokens.spacingVerticalS }}>
+                      <div>
+                        <Caption1>Status</Caption1>
+                        <div>
+                          <Badge appearance="filled" color={getStatusColor(batchLogData.batch.status)}>
+                            {batchLogData.batch.status}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div>
+                        <Caption1>Trigger</Caption1>
+                        <Text>{batchLogData.batch.triggerType} {batchLogData.batch.triggerUserName ? `by ${batchLogData.batch.triggerUserName}` : ''}</Text>
+                      </div>
+                      <div>
+                        <Caption1>Started</Caption1>
+                        <Text>{new Date(batchLogData.batch.startDate).toLocaleString()}</Text>
+                      </div>
+                      <div>
+                        <Caption1>Ended</Caption1>
+                        <Text>{batchLogData.batch.endDate ? new Date(batchLogData.batch.endDate).toLocaleString() : 'Running...'}</Text>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Error Message */}
+                  {batchLogData.batch.errorMessage && (
+                    <MessageBar intent="error" style={{ marginBottom: tokens.spacingVerticalM }}>
+                      <MessageBarBody>
+                        <MessageBarTitle>Batch Error</MessageBarTitle>
+                        {batchLogData.batch.errorMessage}
+                      </MessageBarBody>
+                    </MessageBar>
+                  )}
+
+                  {/* Summary */}
+                  <div style={{ marginBottom: tokens.spacingVerticalL }}>
+                    <Body1Strong>Import Summary</Body1Strong>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: tokens.spacingHorizontalM, marginTop: tokens.spacingVerticalS }}>
+                      <div style={{ textAlign: 'center', padding: tokens.spacingVerticalS, backgroundColor: tokens.colorNeutralBackground3, borderRadius: tokens.borderRadiusMedium }}>
+                        <div style={{ fontSize: tokens.fontSizeHero700, fontWeight: 'bold' }}>{batchLogData.batch.totalItems}</div>
+                        <Caption1>Total Items</Caption1>
+                      </div>
+                      <div style={{ textAlign: 'center', padding: tokens.spacingVerticalS, backgroundColor: tokens.colorNeutralBackground3, borderRadius: tokens.borderRadiusMedium }}>
+                        <div style={{ fontSize: tokens.fontSizeHero700, fontWeight: 'bold', color: tokens.colorPaletteGreenForeground1 }}>{batchLogData.summary.imported}</div>
+                        <Caption1>Imported</Caption1>
+                      </div>
+                      <div style={{ textAlign: 'center', padding: tokens.spacingVerticalS, backgroundColor: tokens.colorNeutralBackground3, borderRadius: tokens.borderRadiusMedium }}>
+                        <div style={{ fontSize: tokens.fontSizeHero700, fontWeight: 'bold' }}>{batchLogData.summary.skipped}</div>
+                        <Caption1>Skipped</Caption1>
+                      </div>
+                      <div style={{ textAlign: 'center', padding: tokens.spacingVerticalS, backgroundColor: tokens.colorNeutralBackground3, borderRadius: tokens.borderRadiusMedium }}>
+                        <div style={{ fontSize: tokens.fontSizeHero700, fontWeight: 'bold', color: tokens.colorPaletteYellowForeground1 }}>{batchLogData.summary.duplicate}</div>
+                        <Caption1>Duplicates</Caption1>
+                      </div>
+                      <div style={{ textAlign: 'center', padding: tokens.spacingVerticalS, backgroundColor: tokens.colorNeutralBackground3, borderRadius: tokens.borderRadiusMedium }}>
+                        <div style={{ fontSize: tokens.fontSizeHero700, fontWeight: 'bold', color: tokens.colorPaletteRedForeground1 }}>{batchLogData.summary.userNotFound}</div>
+                        <Caption1>User Not Found</Caption1>
+                      </div>
+                      <div style={{ textAlign: 'center', padding: tokens.spacingVerticalS, backgroundColor: tokens.colorNeutralBackground3, borderRadius: tokens.borderRadiusMedium }}>
+                        <div style={{ fontSize: tokens.fontSizeHero700, fontWeight: 'bold', color: tokens.colorPaletteRedForeground1 }}>{batchLogData.summary.failed}</div>
+                        <Caption1>Failed</Caption1>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Failures by User */}
+                  {batchLogData.failuresByUser.length > 0 && (
+                    <div style={{ marginBottom: tokens.spacingVerticalL }}>
+                      <Body1Strong>Failures by User (Top 20)</Body1Strong>
+                      <div style={{ maxHeight: '200px', overflowY: 'auto', marginTop: tokens.spacingVerticalS }}>
+                        <Table size="small">
+                          <TableHeader>
+                            <TableRow>
+                              <TableHeaderCell>User Name</TableHeaderCell>
+                              <TableHeaderCell style={{ width: '100px' }}>Count</TableHeaderCell>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {batchLogData.failuresByUser.map((item, idx) => (
+                              <TableRow key={idx}>
+                                <TableCell>{item.userName}</TableCell>
+                                <TableCell>{item.count}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Recent Errors */}
+                  {batchLogData.recentErrors.length > 0 && (
+                    <div>
+                      <Body1Strong>Recent Errors (Last 50)</Body1Strong>
+                      <div style={{ maxHeight: '200px', overflowY: 'auto', marginTop: tokens.spacingVerticalS, backgroundColor: tokens.colorNeutralBackground3, padding: tokens.spacingVerticalS, borderRadius: tokens.borderRadiusMedium }}>
+                        {batchLogData.recentErrors.map((error, idx) => (
+                          <div key={idx} style={{ marginBottom: tokens.spacingVerticalXS }}>
+                            <Text size={200}>
+                              <span style={{ color: tokens.colorNeutralForeground3 }}>Item {error.itemId}:</span>{' '}
+                              <Badge size="small" color={error.status === 'UserNotFound' ? 'warning' : 'danger'}>{error.status}</Badge>{' '}
+                              <span style={{ color: tokens.colorPaletteRedForeground1 }}>{error.error}</span>
+                            </Text>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <MessageBar intent="warning">
+                  <MessageBarBody>
+                    Unable to load batch log.
+                  </MessageBarBody>
+                </MessageBar>
+              )}
+            </DialogContent>
+            <DialogActions>
+              <Button appearance="primary" onClick={() => setShowBatchLog(null)}>
                 Close
               </Button>
             </DialogActions>

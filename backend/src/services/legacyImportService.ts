@@ -788,6 +788,141 @@ class LegacyImportService {
   }
 
   /**
+   * Get detailed log for a specific batch
+   */
+  async getBatchLog(batchId: number): Promise<{
+    batch: {
+      batchId: number;
+      triggerType: string;
+      triggerUserName: string | null;
+      status: string;
+      startDate: string;
+      endDate: string | null;
+      totalItems: number;
+      importedItems: number;
+      skippedItems: number;
+      failedItems: number;
+      errorMessage: string | null;
+    };
+    summary: {
+      imported: number;
+      skipped: number;
+      failed: number;
+      userNotFound: number;
+      duplicate: number;
+    };
+    failuresByUser: Array<{ userName: string; count: number }>;
+    recentErrors: Array<{ itemId: string; status: string; error: string | null }>;
+  }> {
+    const pool = getPool();
+
+    // Get batch info
+    const batchResult = await pool.request()
+      .input('batchId', batchId)
+      .query(`
+        SELECT
+          b.BatchID,
+          b.TriggerType,
+          u.Name AS TriggerUserName,
+          b.Status,
+          b.StartDate,
+          b.EndDate,
+          b.TotalItems,
+          b.ImportedItems,
+          b.SkippedItems,
+          b.FailedItems,
+          b.ErrorMessage
+        FROM LegacyImportBatch b
+        LEFT JOIN Users u ON b.TriggerUserID = u.UserID
+        WHERE b.BatchID = @batchId
+      `);
+
+    if (batchResult.recordset.length === 0) {
+      throw new Error('Batch not found');
+    }
+
+    const batchRow = batchResult.recordset[0];
+
+    // Get summary counts from tracking table
+    const summaryResult = await pool.request().query(`
+      SELECT
+        SUM(CASE WHEN ImportStatus = 'Imported' THEN 1 ELSE 0 END) AS Imported,
+        SUM(CASE WHEN ImportStatus = 'Skipped' THEN 1 ELSE 0 END) AS Skipped,
+        SUM(CASE WHEN ImportStatus = 'Failed' THEN 1 ELSE 0 END) AS Failed,
+        SUM(CASE WHEN ImportStatus = 'UserNotFound' THEN 1 ELSE 0 END) AS UserNotFound,
+        SUM(CASE WHEN ImportStatus = 'Duplicate' THEN 1 ELSE 0 END) AS Duplicate
+      FROM LegacyImportTracking
+    `);
+
+    const summary = summaryResult.recordset[0] || {
+      Imported: 0, Skipped: 0, Failed: 0, UserNotFound: 0, Duplicate: 0
+    };
+
+    // Get failures grouped by user name (extracted from error message)
+    const failuresByUserResult = await pool.request().query(`
+      SELECT TOP 20
+        CASE
+          WHEN ErrorMessage LIKE 'User not found: %'
+          THEN SUBSTRING(ErrorMessage, 17, LEN(ErrorMessage))
+          ELSE 'Other Error'
+        END AS UserName,
+        COUNT(*) AS Count
+      FROM LegacyImportTracking
+      WHERE ImportStatus IN ('Failed', 'UserNotFound')
+      GROUP BY
+        CASE
+          WHEN ErrorMessage LIKE 'User not found: %'
+          THEN SUBSTRING(ErrorMessage, 17, LEN(ErrorMessage))
+          ELSE 'Other Error'
+        END
+      ORDER BY COUNT(*) DESC
+    `);
+
+    // Get recent errors
+    const recentErrorsResult = await pool.request().query(`
+      SELECT TOP 50
+        SharePointListItemID,
+        ImportStatus,
+        ErrorMessage
+      FROM LegacyImportTracking
+      WHERE ImportStatus IN ('Failed', 'UserNotFound')
+      ORDER BY ModifiedDate DESC
+    `);
+
+    return {
+      batch: {
+        batchId: batchRow.BatchID,
+        triggerType: batchRow.TriggerType,
+        triggerUserName: batchRow.TriggerUserName,
+        status: batchRow.Status,
+        startDate: batchRow.StartDate?.toISOString() || '',
+        endDate: batchRow.EndDate?.toISOString() || null,
+        totalItems: batchRow.TotalItems,
+        importedItems: batchRow.ImportedItems,
+        skippedItems: batchRow.SkippedItems,
+        failedItems: batchRow.FailedItems,
+        errorMessage: batchRow.ErrorMessage,
+      },
+      summary: {
+        imported: summary.Imported || 0,
+        skipped: summary.Skipped || 0,
+        failed: summary.Failed || 0,
+        userNotFound: summary.UserNotFound || 0,
+        duplicate: summary.Duplicate || 0,
+      },
+      failuresByUser: failuresByUserResult.recordset.map(row => ({
+        userName: row.UserName,
+        count: row.Count,
+      })),
+      recentErrors: recentErrorsResult.recordset.map(row => ({
+        itemId: row.SharePointListItemID,
+        status: row.ImportStatus,
+        error: row.ErrorMessage,
+      })),
+    };
+  }
+
+  /**
    * Update configuration (for admin panel)
    */
   async updateConfig(config: {

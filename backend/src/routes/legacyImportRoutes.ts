@@ -40,6 +40,9 @@ adminRouter.get('/history', legacyImportController.getHistory);
 // Get failed imports
 adminRouter.get('/failed', legacyImportController.getFailedImports);
 
+// Get batch log details
+adminRouter.get('/batch/:batchId/log', legacyImportController.getBatchLog);
+
 // Update configuration
 adminRouter.put('/config', legacyImportController.updateConfig);
 

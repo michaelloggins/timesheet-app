@@ -127,6 +127,29 @@ export const getFailedImports = asyncHandler(async (req: Request, res: Response)
 });
 
 /**
+ * Get detailed log for a specific batch (admin only)
+ * GET /api/admin/legacy-import/batch/:batchId/log
+ */
+export const getBatchLog = asyncHandler(async (req: Request, res: Response) => {
+  const batchId = parseInt(req.params.batchId);
+
+  if (isNaN(batchId)) {
+    res.status(400).json({
+      status: 'error',
+      message: 'Invalid batch ID',
+    });
+    return;
+  }
+
+  const log = await legacyImportService.getBatchLog(batchId);
+
+  res.status(200).json({
+    status: 'success',
+    data: log,
+  });
+});
+
+/**
  * Update legacy import configuration (admin only)
  * PUT /api/admin/legacy-import/config
  */

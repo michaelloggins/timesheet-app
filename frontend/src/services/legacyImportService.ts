@@ -225,3 +225,39 @@ export async function previewImport(): Promise<PreviewData> {
   const response = await apiClient.get('/admin/legacy-import/preview');
   return response.data.data;
 }
+
+/**
+ * Batch log details
+ */
+export interface BatchLogData {
+  batch: {
+    batchId: number;
+    triggerType: string;
+    triggerUserName: string | null;
+    status: string;
+    startDate: string;
+    endDate: string | null;
+    totalItems: number;
+    importedItems: number;
+    skippedItems: number;
+    failedItems: number;
+    errorMessage: string | null;
+  };
+  summary: {
+    imported: number;
+    skipped: number;
+    failed: number;
+    userNotFound: number;
+    duplicate: number;
+  };
+  failuresByUser: Array<{ userName: string; count: number }>;
+  recentErrors: Array<{ itemId: string; status: string; error: string | null }>;
+}
+
+/**
+ * Get batch log details
+ */
+export async function getBatchLog(batchId: number): Promise<BatchLogData> {
+  const response = await apiClient.get(`/admin/legacy-import/batch/${batchId}/log`);
+  return response.data.data;
+}
