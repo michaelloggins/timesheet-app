@@ -8,6 +8,7 @@ import { asyncHandler } from '../middleware/errorHandler';
 import { legacyImportService } from '../services/legacyImportService';
 import { sharePointService } from '../services/sharePointService';
 import { logger } from '../utils/logger';
+import { getPool } from '../config/database';
 
 /**
  * Get legacy import status
@@ -252,7 +253,10 @@ export const getSharePointColumns = asyncHandler(async (req: Request, res: Respo
  */
 export const previewItems = asyncHandler(async (req: Request, res: Response) => {
   try {
+    logger.info('Preview items endpoint called');
+
     if (!sharePointService.isAvailable()) {
+      logger.warn('SharePoint service is not available');
       res.status(503).json({
         status: 'error',
         message: 'SharePoint service is not available. Check Azure AD credentials.',
@@ -261,9 +265,10 @@ export const previewItems = asyncHandler(async (req: Request, res: Response) => 
     }
 
     const status = await legacyImportService.getStatus();
+    logger.info('Got legacy import status', { enabled: status.enabled });
 
     // Get current config
-    const pool = (await import('../config/database')).getPool();
+    const pool = getPool();
     const configResult = await pool.request().query(`
       SELECT ConfigKey, ConfigValue
       FROM SystemConfig
@@ -278,6 +283,11 @@ export const previewItems = asyncHandler(async (req: Request, res: Response) => 
     const siteId = config['LegacyImport.SharePointSiteId'];
     const listId = config['LegacyImport.SharePointListId'];
 
+    logger.info('SharePoint config loaded', {
+      siteId: siteId ? `${siteId.substring(0, 30)}...` : 'not set',
+      listId: listId || 'not set',
+    });
+
     if (!siteId || !listId) {
       res.status(400).json({
         status: 'error',
@@ -288,11 +298,13 @@ export const previewItems = asyncHandler(async (req: Request, res: Response) => 
     }
 
     // Fetch preview items (first 10)
+    logger.info('Fetching preview items from SharePoint...');
     const items = await sharePointService.fetchTimesheetItems({
       siteId,
       listId,
       top: 10,
     });
+    logger.info(`Fetched ${items.length} preview items`);
 
     // Get item count
     const totalCount = await sharePointService.getItemCount(siteId, listId);
