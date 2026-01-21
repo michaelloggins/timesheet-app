@@ -101,6 +101,21 @@ export const useRunManualImport = () => {
 };
 
 /**
+ * Hook to import from CSV (admin only)
+ */
+export const useImportCsv = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<BatchImportResult, Error, string>({
+    mutationFn: (csvContent: string) => legacyImportService.importCsv(csvContent),
+    onSuccess: () => {
+      // Invalidate all legacy import queries
+      queryClient.invalidateQueries({ queryKey: ['legacy-import'] });
+    },
+  });
+};
+
+/**
  * Hook to update legacy import configuration (admin only)
  */
 export const useUpdateLegacyImportConfig = () => {

@@ -127,6 +127,33 @@ export const getFailedImports = asyncHandler(async (req: Request, res: Response)
 });
 
 /**
+ * Import from CSV file (admin only)
+ * POST /api/admin/legacy-import/csv
+ */
+export const importCsv = asyncHandler(async (req: Request, res: Response) => {
+  const userId = req.user!.userId;
+  const { csvContent } = req.body;
+
+  if (!csvContent) {
+    res.status(400).json({
+      status: 'error',
+      message: 'CSV content is required',
+    });
+    return;
+  }
+
+  logger.info(`Starting CSV import triggered by admin ${userId}`);
+
+  const result = await legacyImportService.runCsvImport(csvContent, userId);
+
+  res.status(200).json({
+    status: 'success',
+    message: `CSV import completed: ${result.importedItems} items imported`,
+    data: result,
+  });
+});
+
+/**
  * Get detailed log for a specific batch (admin only)
  * GET /api/admin/legacy-import/batch/:batchId/log
  */

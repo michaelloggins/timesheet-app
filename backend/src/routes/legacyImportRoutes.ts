@@ -34,6 +34,9 @@ adminRouter.get('/status', legacyImportController.getStatus);
 // Run manual import
 adminRouter.post('/run', legacyImportController.runImport);
 
+// Import from CSV
+adminRouter.post('/csv', legacyImportController.importCsv);
+
 // Get import history
 adminRouter.get('/history', legacyImportController.getHistory);
 

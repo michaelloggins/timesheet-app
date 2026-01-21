@@ -3,7 +3,7 @@
  * Admin interface for managing SharePoint legacy data import
  */
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import {
   Title3,
   Button,
@@ -48,6 +48,7 @@ import {
   InfoRegular,
   ArrowDownloadRegular,
   DocumentRegular,
+  ArrowUploadRegular,
 } from '@fluentui/react-icons';
 import {
   useLegacyImportStatus,
@@ -56,6 +57,7 @@ import {
   useUpdateLegacyImportConfig,
   useImportPreview,
   useBatchLog,
+  useImportCsv,
 } from '../../hooks/useLegacyImport';
 
 const useStyles = makeStyles({
@@ -157,8 +159,14 @@ export const LegacyImportAdmin = () => {
   const [showConfig, setShowConfig] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [showBatchLog, setShowBatchLog] = useState<number | null>(null);
+  const [showCsvUpload, setShowCsvUpload] = useState(false);
+  const [csvContent, setCsvContent] = useState<string | null>(null);
+  const [csvFileName, setCsvFileName] = useState<string>('');
   const [configSiteId, setConfigSiteId] = useState('');
   const [configListId, setConfigListId] = useState('');
+
+  // Refs
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Data queries
   const { data: status, isLoading: statusLoading, error: statusError, refetch: refetchStatus } = useLegacyImportStatus();
@@ -167,6 +175,7 @@ export const LegacyImportAdmin = () => {
   // Mutations
   const runImport = useRunManualImport();
   const updateConfig = useUpdateLegacyImportConfig();
+  const importCsv = useImportCsv();
 
   // Preview query (only when dialog is open)
   const { data: previewData, isLoading: previewLoading } = useImportPreview(showPreview);
@@ -196,6 +205,36 @@ export const LegacyImportAdmin = () => {
     });
     setShowConfig(false);
     refetchStatus();
+  };
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const content = e.target?.result as string;
+      setCsvContent(content);
+      setCsvFileName(file.name);
+      setShowCsvUpload(true);
+    };
+    reader.readAsText(file);
+
+    // Reset file input so same file can be selected again
+    event.target.value = '';
+  };
+
+  const handleCsvImport = async () => {
+    if (!csvContent) return;
+
+    await importCsv.mutateAsync(csvContent);
+    refetchStatus();
+  };
+
+  const handleCloseCsvDialog = () => {
+    setShowCsvUpload(false);
+    setCsvContent(null);
+    setCsvFileName('');
   };
 
   const formatDate = (dateStr: string | null) => {
@@ -238,6 +277,13 @@ export const LegacyImportAdmin = () => {
           </Caption1>
         </div>
         <div style={{ display: 'flex', gap: tokens.spacingHorizontalS }}>
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileSelect}
+            accept=".csv"
+            style={{ display: 'none' }}
+          />
           <Button
             appearance="subtle"
             icon={<SettingsRegular />}
@@ -252,6 +298,13 @@ export const LegacyImportAdmin = () => {
             disabled={!status?.enabled}
           >
             Preview Data
+          </Button>
+          <Button
+            appearance="secondary"
+            icon={<ArrowUploadRegular />}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            Import CSV
           </Button>
           <Button
             appearance="primary"
@@ -757,6 +810,126 @@ export const LegacyImportAdmin = () => {
               <Button appearance="primary" onClick={() => setShowBatchLog(null)}>
                 Close
               </Button>
+            </DialogActions>
+          </DialogBody>
+        </DialogSurface>
+      </Dialog>
+
+      {/* CSV Upload Dialog */}
+      <Dialog open={showCsvUpload} onOpenChange={(_, data) => !data.open && handleCloseCsvDialog()}>
+        <DialogSurface style={{ maxWidth: '600px' }}>
+          <DialogTitle>Import from CSV File</DialogTitle>
+          <DialogBody>
+            <DialogContent>
+              {importCsv.isPending ? (
+                <div style={{ textAlign: 'center', padding: tokens.spacingVerticalXXL }}>
+                  <Spinner label="Importing data from CSV..." />
+                  <Caption1 style={{ display: 'block', marginTop: tokens.spacingVerticalM }}>
+                    This may take a few minutes for large files...
+                  </Caption1>
+                </div>
+              ) : importCsv.isSuccess && importCsv.data ? (
+                <>
+                  <MessageBar intent="success" style={{ marginBottom: tokens.spacingVerticalM }}>
+                    <MessageBarBody>
+                      <MessageBarTitle>Import Completed</MessageBarTitle>
+                      Successfully processed {importCsv.data.totalItems} items from CSV.
+                    </MessageBarBody>
+                  </MessageBar>
+                  <div className={styles.resultGrid}>
+                    <div className={styles.resultItem}>
+                      <div style={{ fontSize: tokens.fontSizeHero700, fontWeight: 'bold', color: tokens.colorPaletteGreenForeground1 }}>
+                        {importCsv.data.importedItems}
+                      </div>
+                      <Caption1>Imported</Caption1>
+                    </div>
+                    <div className={styles.resultItem}>
+                      <div style={{ fontSize: tokens.fontSizeHero700, fontWeight: 'bold' }}>
+                        {importCsv.data.skippedItems}
+                      </div>
+                      <Caption1>Skipped</Caption1>
+                    </div>
+                    <div className={styles.resultItem}>
+                      <div style={{ fontSize: tokens.fontSizeHero700, fontWeight: 'bold', color: tokens.colorPaletteYellowForeground1 }}>
+                        {importCsv.data.duplicateItems}
+                      </div>
+                      <Caption1>Duplicates</Caption1>
+                    </div>
+                    <div className={styles.resultItem}>
+                      <div style={{ fontSize: tokens.fontSizeHero700, fontWeight: 'bold', color: tokens.colorPaletteRedForeground1 }}>
+                        {importCsv.data.userNotFoundItems}
+                      </div>
+                      <Caption1>User Not Found</Caption1>
+                    </div>
+                    <div className={styles.resultItem}>
+                      <div style={{ fontSize: tokens.fontSizeHero700, fontWeight: 'bold', color: tokens.colorPaletteRedForeground1 }}>
+                        {importCsv.data.failedItems}
+                      </div>
+                      <Caption1>Failed</Caption1>
+                    </div>
+                  </div>
+                  {importCsv.data.errors.length > 0 && (
+                    <div className={styles.errorList}>
+                      <Caption1 style={{ display: 'block', marginBottom: tokens.spacingVerticalXS }}>
+                        Errors ({importCsv.data.errors.length}):
+                      </Caption1>
+                      {importCsv.data.errors.slice(0, 10).map((error, idx) => (
+                        <Text key={idx} size={200} style={{ display: 'block', color: tokens.colorPaletteRedForeground1 }}>
+                          {error}
+                        </Text>
+                      ))}
+                      {importCsv.data.errors.length > 10 && (
+                        <Caption1>...and {importCsv.data.errors.length - 10} more errors</Caption1>
+                      )}
+                    </div>
+                  )}
+                </>
+              ) : importCsv.isError ? (
+                <MessageBar intent="error">
+                  <MessageBarBody>
+                    <MessageBarTitle>Import Failed</MessageBarTitle>
+                    {importCsv.error instanceof Error ? importCsv.error.message : 'Failed to import CSV data'}
+                  </MessageBarBody>
+                </MessageBar>
+              ) : (
+                <>
+                  <MessageBar intent="info" style={{ marginBottom: tokens.spacingVerticalM }}>
+                    <MessageBarBody>
+                      <MessageBarTitle>File Selected</MessageBarTitle>
+                      {csvFileName}
+                    </MessageBarBody>
+                  </MessageBar>
+                  <Text style={{ display: 'block', marginBottom: tokens.spacingVerticalM }}>
+                    This will import timesheet data from the selected CSV file.
+                    The CSV should have the following columns:
+                  </Text>
+                  <div style={{ backgroundColor: tokens.colorNeutralBackground3, padding: tokens.spacingVerticalS, borderRadius: tokens.borderRadiusMedium, marginBottom: tokens.spacingVerticalM }}>
+                    <Caption1 style={{ fontFamily: 'monospace' }}>
+                      Department, Title (Employee Name), Work Date, ProjectName, Hours Worked, Submitted, Status, ApprovedBy, Note
+                    </Caption1>
+                  </div>
+                  <MessageBar intent="warning">
+                    <MessageBarBody>
+                      Employees must already exist in the system to import their timesheet data.
+                      Entries for unknown users will be marked as "UserNotFound".
+                    </MessageBarBody>
+                  </MessageBar>
+                </>
+              )}
+            </DialogContent>
+            <DialogActions>
+              <Button appearance="secondary" onClick={handleCloseCsvDialog}>
+                {importCsv.isSuccess ? 'Close' : 'Cancel'}
+              </Button>
+              {!importCsv.isSuccess && !importCsv.isPending && (
+                <Button
+                  appearance="primary"
+                  onClick={handleCsvImport}
+                  disabled={!csvContent}
+                >
+                  Import Data
+                </Button>
+              )}
             </DialogActions>
           </DialogBody>
         </DialogSurface>

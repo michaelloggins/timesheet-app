@@ -2,6 +2,7 @@
  * Legacy Import Service
  * Handles importing timesheet data from legacy SharePoint Lists
  * - Fetches data from SharePoint via Graph API
+ * - Imports from CSV files
  * - Normalizes data to match current schema
  * - Groups entries by week to create timesheets
  * - Tracks imported items to prevent duplicates
@@ -11,6 +12,21 @@ import { getPool } from '../config/database';
 import { sharePointService, SharePointTimesheetItem } from './sharePointService';
 import { logger } from '../utils/logger';
 import { getWeekStart, getWeekEnd } from '../utils/dateHelper';
+
+/**
+ * CSV row from legacy timesheet export
+ */
+interface CsvTimesheetRow {
+  Department: string;
+  Title: string;  // Employee name
+  'Work Date': string;
+  ProjectName: string;
+  'Hours Worked': string;
+  Submitted: string;
+  Status: string;
+  ApprovedBy: string;
+  Note: string;
+}
 
 /**
  * Normalized entry ready for database insert
@@ -668,6 +684,260 @@ class LegacyImportService {
         `);
 
       logger.error('Import batch failed:', error);
+    }
+
+    return result;
+  }
+
+  /**
+   * Parse CSV content into rows
+   */
+  private parseCsv(content: string): CsvTimesheetRow[] {
+    const lines = content.split('\n');
+    const rows: CsvTimesheetRow[] = [];
+
+    // Find the header line (skip schema line if present)
+    let headerIndex = 0;
+    for (let i = 0; i < Math.min(5, lines.length); i++) {
+      if (lines[i].includes('"Department"') || lines[i].includes('Department,')) {
+        headerIndex = i;
+        break;
+      }
+    }
+
+    // Parse header
+    const headerLine = lines[headerIndex];
+    const headers = this.parseCsvLine(headerLine);
+
+    // Parse data rows
+    for (let i = headerIndex + 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+
+      const values = this.parseCsvLine(line);
+      if (values.length < headers.length) continue;
+
+      const row: Record<string, string> = {};
+      headers.forEach((h, idx) => {
+        row[h] = values[idx] || '';
+      });
+
+      rows.push(row as unknown as CsvTimesheetRow);
+    }
+
+    return rows;
+  }
+
+  /**
+   * Parse a single CSV line handling quoted fields
+   */
+  private parseCsvLine(line: string): string[] {
+    const result: string[] = [];
+    let current = '';
+    let inQuotes = false;
+
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+
+      if (char === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          current += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === ',' && !inQuotes) {
+        result.push(current.trim());
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    result.push(current.trim());
+
+    return result;
+  }
+
+  /**
+   * Normalize a CSV row into our import format
+   */
+  private normalizeCsvRow(row: CsvTimesheetRow, rowIndex: number): NormalizedEntry | null {
+    const employeeName = row.Title?.trim();
+    if (!employeeName) {
+      return null;
+    }
+
+    // Parse work date
+    const workDateStr = row['Work Date'];
+    if (!workDateStr) {
+      return null;
+    }
+    const workDate = new Date(workDateStr);
+    if (isNaN(workDate.getTime())) {
+      logger.warn(`Row ${rowIndex}: Invalid date ${workDateStr}`);
+      return null;
+    }
+
+    // Parse hours - skip 0 hour entries
+    const hoursStr = row['Hours Worked'] || '0';
+    const hours = parseFloat(hoursStr);
+    if (isNaN(hours) || hours <= 0) {
+      return null; // Skip zero-hour placeholder entries
+    }
+
+    // Extract project code from project name (e.g., "Administration - 0100" -> "0100")
+    const projectName = row.ProjectName?.trim() || null;
+    let projectCode: string | null = null;
+    if (projectName) {
+      const codeMatch = projectName.match(/[-–]\s*(\d+)$/);
+      if (codeMatch) {
+        projectCode = codeMatch[1];
+      }
+    }
+
+    return {
+      sharePointItemId: `csv-${rowIndex}`,
+      employeeEmail: '', // CSV doesn't have email
+      employeeName,
+      workDate,
+      projectName,
+      projectCode,
+      hoursWorked: hours,
+      workLocation: 'Office', // Default - CSV doesn't have location
+      notes: row.Note?.trim() || null,
+      originalData: JSON.stringify(row),
+    };
+  }
+
+  /**
+   * Import from CSV file
+   */
+  async runCsvImport(csvContent: string, triggerUserId: number): Promise<BatchImportResult> {
+    const pool = getPool();
+
+    logger.info('Starting CSV import...');
+
+    // Create batch record
+    const batchResult = await pool.request()
+      .input('triggerType', 'Manual')
+      .input('triggerUserId', triggerUserId)
+      .query(`
+        INSERT INTO LegacyImportBatch (TriggerType, TriggerUserID, Status, TotalItems)
+        VALUES (@triggerType, @triggerUserId, 'Running', 0);
+        SELECT SCOPE_IDENTITY() AS BatchID;
+      `);
+    const batchId = batchResult.recordset[0].BatchID;
+
+    const result: BatchImportResult = {
+      batchId,
+      status: 'Completed',
+      totalItems: 0,
+      importedItems: 0,
+      skippedItems: 0,
+      failedItems: 0,
+      userNotFoundItems: 0,
+      duplicateItems: 0,
+      errors: [],
+      itemResults: [],
+    };
+
+    try {
+      // Parse CSV
+      const rows = this.parseCsv(csvContent);
+      logger.info(`Parsed ${rows.length} rows from CSV`);
+
+      // Normalize and filter rows
+      const entries: NormalizedEntry[] = [];
+      for (let i = 0; i < rows.length; i++) {
+        const normalized = this.normalizeCsvRow(rows[i], i);
+        if (normalized) {
+          entries.push(normalized);
+        } else {
+          result.skippedItems++;
+        }
+      }
+
+      result.totalItems = entries.length + result.skippedItems;
+      logger.info(`${entries.length} valid entries to import (${result.skippedItems} skipped)`);
+
+      // Update batch total
+      await pool.request()
+        .input('batchId', batchId)
+        .input('total', result.totalItems)
+        .query('UPDATE LegacyImportBatch SET TotalItems = @total WHERE BatchID = @batchId');
+
+      // Process each entry
+      for (const entry of entries) {
+        const itemResult = await this.importEntry(entry, 'csv-import', 'csv-import');
+        result.itemResults.push(itemResult);
+
+        // Track result
+        await this.recordImportResult(
+          entry.sharePointItemId,
+          'csv-import',
+          'csv-import',
+          itemResult,
+          entry.originalData
+        );
+
+        switch (itemResult.status) {
+          case 'Imported':
+            result.importedItems++;
+            break;
+          case 'Skipped':
+            result.skippedItems++;
+            break;
+          case 'Failed':
+            result.failedItems++;
+            if (itemResult.errorMessage) {
+              result.errors.push(`${entry.sharePointItemId}: ${itemResult.errorMessage}`);
+            }
+            break;
+          case 'UserNotFound':
+            result.userNotFoundItems++;
+            if (itemResult.errorMessage) {
+              result.errors.push(`${entry.sharePointItemId}: ${itemResult.errorMessage}`);
+            }
+            break;
+          case 'Duplicate':
+            result.duplicateItems++;
+            break;
+        }
+      }
+
+      // Update batch record
+      await pool.request()
+        .input('batchId', batchId)
+        .input('imported', result.importedItems)
+        .input('skipped', result.skippedItems + result.duplicateItems)
+        .input('failed', result.failedItems + result.userNotFoundItems)
+        .query(`
+          UPDATE LegacyImportBatch
+          SET Status = 'Completed',
+              EndDate = GETUTCDATE(),
+              ImportedItems = @imported,
+              SkippedItems = @skipped,
+              FailedItems = @failed
+          WHERE BatchID = @batchId
+        `);
+
+      logger.info(`CSV import completed: ${result.importedItems} imported, ${result.skippedItems} skipped, ${result.failedItems} failed, ${result.userNotFoundItems} user not found`);
+    } catch (error: any) {
+      result.status = 'Failed';
+      result.errors.push(error.message);
+
+      await pool.request()
+        .input('batchId', batchId)
+        .input('error', error.message)
+        .query(`
+          UPDATE LegacyImportBatch
+          SET Status = 'Failed',
+              EndDate = GETUTCDATE(),
+              ErrorMessage = @error
+          WHERE BatchID = @batchId
+        `);
+
+      logger.error('CSV import failed:', error);
     }
 
     return result;

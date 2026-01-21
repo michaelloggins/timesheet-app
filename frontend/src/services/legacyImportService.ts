@@ -261,3 +261,11 @@ export async function getBatchLog(batchId: number): Promise<BatchLogData> {
   const response = await apiClient.get(`/admin/legacy-import/batch/${batchId}/log`);
   return response.data.data;
 }
+
+/**
+ * Import from CSV content
+ */
+export async function importCsv(csvContent: string): Promise<BatchImportResult> {
+  const response = await apiClient.post('/admin/legacy-import/csv', { csvContent });
+  return response.data.data;
+}
