@@ -265,7 +265,7 @@ export const previewItems = asyncHandler(async (req: Request, res: Response) => 
   const pool = (await import('../config/database')).getPool();
   const configResult = await pool.request().query(`
     SELECT ConfigKey, ConfigValue
-    FROM SystemConfiguration
+    FROM SystemConfig
     WHERE ConfigKey IN ('LegacyImport.SharePointSiteId', 'LegacyImport.SharePointListId')
   `);
 

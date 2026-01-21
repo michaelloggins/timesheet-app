@@ -78,18 +78,18 @@ export interface LegacyImportStatus {
 
 class LegacyImportService {
   /**
-   * Get configuration from SystemConfiguration table
+   * Get configuration from SystemConfig table
    */
   private async getConfig(key: string): Promise<string | null> {
     const pool = getPool();
     const result = await pool.request()
       .input('key', key)
-      .query('SELECT ConfigValue FROM SystemConfiguration WHERE ConfigKey = @key');
+      .query('SELECT ConfigValue FROM SystemConfig WHERE ConfigKey = @key');
     return result.recordset[0]?.ConfigValue || null;
   }
 
   /**
-   * Update configuration in SystemConfiguration table
+   * Update configuration in SystemConfig table
    */
   private async setConfig(key: string, value: string): Promise<void> {
     const pool = getPool();
@@ -97,7 +97,7 @@ class LegacyImportService {
       .input('key', key)
       .input('value', value)
       .query(`
-        UPDATE SystemConfiguration
+        UPDATE SystemConfig
         SET ConfigValue = @value, ModifiedDate = GETUTCDATE()
         WHERE ConfigKey = @key
       `);

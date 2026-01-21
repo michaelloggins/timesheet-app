@@ -160,41 +160,41 @@ END
 GO
 
 -- Insert default configuration values
-IF NOT EXISTS (SELECT 1 FROM SystemConfiguration WHERE ConfigKey = 'LegacyImport.Enabled')
+IF NOT EXISTS (SELECT 1 FROM SystemConfig WHERE ConfigKey = 'LegacyImport.Enabled')
 BEGIN
-    INSERT INTO SystemConfiguration (ConfigKey, ConfigValue, Description)
+    INSERT INTO SystemConfig (ConfigKey, ConfigValue, Description)
     VALUES ('LegacyImport.Enabled', 'false', 'Enable/disable legacy SharePoint timesheet import');
     PRINT 'Added LegacyImport.Enabled config';
 END
 GO
 
-IF NOT EXISTS (SELECT 1 FROM SystemConfiguration WHERE ConfigKey = 'LegacyImport.SharePointSiteId')
+IF NOT EXISTS (SELECT 1 FROM SystemConfig WHERE ConfigKey = 'LegacyImport.SharePointSiteId')
 BEGIN
-    INSERT INTO SystemConfiguration (ConfigKey, ConfigValue, Description)
+    INSERT INTO SystemConfig (ConfigKey, ConfigValue, Description)
     VALUES ('LegacyImport.SharePointSiteId', '', 'SharePoint Site ID containing the legacy timesheet list');
     PRINT 'Added LegacyImport.SharePointSiteId config';
 END
 GO
 
-IF NOT EXISTS (SELECT 1 FROM SystemConfiguration WHERE ConfigKey = 'LegacyImport.SharePointListId')
+IF NOT EXISTS (SELECT 1 FROM SystemConfig WHERE ConfigKey = 'LegacyImport.SharePointListId')
 BEGIN
-    INSERT INTO SystemConfiguration (ConfigKey, ConfigValue, Description)
+    INSERT INTO SystemConfig (ConfigKey, ConfigValue, Description)
     VALUES ('LegacyImport.SharePointListId', '', 'SharePoint List ID for legacy timesheets');
     PRINT 'Added LegacyImport.SharePointListId config';
 END
 GO
 
-IF NOT EXISTS (SELECT 1 FROM SystemConfiguration WHERE ConfigKey = 'LegacyImport.LastSyncDate')
+IF NOT EXISTS (SELECT 1 FROM SystemConfig WHERE ConfigKey = 'LegacyImport.LastSyncDate')
 BEGIN
-    INSERT INTO SystemConfiguration (ConfigKey, ConfigValue, Description)
+    INSERT INTO SystemConfig (ConfigKey, ConfigValue, Description)
     VALUES ('LegacyImport.LastSyncDate', '', 'Last successful sync date (ISO format)');
     PRINT 'Added LegacyImport.LastSyncDate config';
 END
 GO
 
-IF NOT EXISTS (SELECT 1 FROM SystemConfiguration WHERE ConfigKey = 'LegacyImport.AutoSyncOnLogin')
+IF NOT EXISTS (SELECT 1 FROM SystemConfig WHERE ConfigKey = 'LegacyImport.AutoSyncOnLogin')
 BEGIN
-    INSERT INTO SystemConfiguration (ConfigKey, ConfigValue, Description)
+    INSERT INTO SystemConfig (ConfigKey, ConfigValue, Description)
     VALUES ('LegacyImport.AutoSyncOnLogin', 'true', 'Automatically check for new legacy data when users log in');
     PRINT 'Added LegacyImport.AutoSyncOnLogin config';
 END
