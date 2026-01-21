@@ -251,61 +251,71 @@ export const getSharePointColumns = asyncHandler(async (req: Request, res: Respo
  * GET /api/admin/legacy-import/preview
  */
 export const previewItems = asyncHandler(async (req: Request, res: Response) => {
-  if (!sharePointService.isAvailable()) {
-    res.status(503).json({
-      status: 'error',
-      message: 'SharePoint service is not available. Check Azure AD credentials.',
+  try {
+    if (!sharePointService.isAvailable()) {
+      res.status(503).json({
+        status: 'error',
+        message: 'SharePoint service is not available. Check Azure AD credentials.',
+      });
+      return;
+    }
+
+    const status = await legacyImportService.getStatus();
+
+    // Get current config
+    const pool = (await import('../config/database')).getPool();
+    const configResult = await pool.request().query(`
+      SELECT ConfigKey, ConfigValue
+      FROM SystemConfig
+      WHERE ConfigKey IN ('LegacyImport.SharePointSiteId', 'LegacyImport.SharePointListId')
+    `);
+
+    const config: Record<string, string> = {};
+    for (const row of configResult.recordset) {
+      config[row.ConfigKey] = row.ConfigValue;
+    }
+
+    const siteId = config['LegacyImport.SharePointSiteId'];
+    const listId = config['LegacyImport.SharePointListId'];
+
+    if (!siteId || !listId) {
+      res.status(400).json({
+        status: 'error',
+        message: 'SharePoint site and list must be configured first',
+        debug: { siteId: siteId || 'not set', listId: listId || 'not set' },
+      });
+      return;
+    }
+
+    // Fetch preview items (first 10)
+    const items = await sharePointService.fetchTimesheetItems({
+      siteId,
+      listId,
+      top: 10,
     });
-    return;
-  }
 
-  const status = await legacyImportService.getStatus();
+    // Get item count
+    const totalCount = await sharePointService.getItemCount(siteId, listId);
 
-  // Get current config
-  const pool = (await import('../config/database')).getPool();
-  const configResult = await pool.request().query(`
-    SELECT ConfigKey, ConfigValue
-    FROM SystemConfig
-    WHERE ConfigKey IN ('LegacyImport.SharePointSiteId', 'LegacyImport.SharePointListId')
-  `);
-
-  const config: Record<string, string> = {};
-  for (const row of configResult.recordset) {
-    config[row.ConfigKey] = row.ConfigValue;
-  }
-
-  const siteId = config['LegacyImport.SharePointSiteId'];
-  const listId = config['LegacyImport.SharePointListId'];
-
-  if (!siteId || !listId) {
-    res.status(400).json({
-      status: 'error',
-      message: 'SharePoint site and list must be configured first',
+    res.status(200).json({
+      status: 'success',
+      data: {
+        totalItems: totalCount,
+        previewItems: items.map(item => ({
+          id: item.id,
+          fields: item.fields,
+          createdDateTime: item.createdDateTime,
+          lastModifiedDateTime: item.lastModifiedDateTime,
+        })),
+        currentStatus: status,
+      },
     });
-    return;
+  } catch (error: any) {
+    logger.error('Preview items error:', error);
+    res.status(500).json({
+      status: 'error',
+      message: error.message || 'Failed to preview SharePoint items',
+      details: error.code || error.statusCode || 'Unknown error',
+    });
   }
-
-  // Fetch preview items (first 10)
-  const items = await sharePointService.fetchTimesheetItems({
-    siteId,
-    listId,
-    top: 10,
-  });
-
-  // Get item count
-  const totalCount = await sharePointService.getItemCount(siteId, listId);
-
-  res.status(200).json({
-    status: 'success',
-    data: {
-      totalItems: totalCount,
-      previewItems: items.map(item => ({
-        id: item.id,
-        fields: item.fields,
-        createdDateTime: item.createdDateTime,
-        lastModifiedDateTime: item.lastModifiedDateTime,
-      })),
-      currentStatus: status,
-    },
-  });
 });
