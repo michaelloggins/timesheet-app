@@ -510,9 +510,13 @@ export const LegacyImportAdmin = () => {
                   SharePoint Connection
                 </Body1Strong>
 
-                <Field label="SharePoint Site ID" style={{ marginBottom: tokens.spacingVerticalM }}>
+                <Field
+                  label="SharePoint Site ID (Full Compound ID)"
+                  style={{ marginBottom: tokens.spacingVerticalM }}
+                  hint="Format: hostname,site-id,web-id (from Graph Explorer)"
+                >
                   <Input
-                    placeholder="e.g., contoso.sharepoint.com,guid,guid"
+                    placeholder="miravistadiagnostics.sharepoint.com,xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx,yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy"
                     value={configSiteId}
                     onChange={(_, data) => setConfigSiteId(data.value)}
                   />
@@ -520,15 +524,16 @@ export const LegacyImportAdmin = () => {
 
                 <Field label="SharePoint List ID">
                   <Input
-                    placeholder="List GUID or name"
+                    placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
                     value={configListId}
                     onChange={(_, data) => setConfigListId(data.value)}
                   />
                 </Field>
 
-                <Caption1 style={{ display: 'block', marginTop: tokens.spacingVerticalM }}>
-                  The SharePoint Site ID can be found in the site URL or via Graph Explorer.
-                  The List ID is the GUID of the SharePoint list containing legacy timesheet data.
+                <Caption1 style={{ display: 'block', marginTop: tokens.spacingVerticalM, color: tokens.colorNeutralForeground3 }}>
+                  <strong>To get the Site ID:</strong> In Graph Explorer, run:<br />
+                  <code style={{ fontSize: '11px' }}>GET /sites/miravistadiagnostics.sharepoint.com:/sites/YourSite</code><br />
+                  Copy the full "id" value (e.g., miravistadiagnostics.sharepoint.com,guid1,guid2)
                 </Caption1>
               </div>
             </DialogContent>
